@@ -1,0 +1,13 @@
+row number,Primary Name,Street Address,City,State,Zip Code,Prospect,Title,ExMod,Corrected Name,Corrected Name Reasoning,Combined Address,Test Label,Label,Label #,Sent from A. Renewal,Ready to send to Address Labels Doc? (Trigger),Sent to Doc
+,DESERT HAVEN ENTERPRISES A NON PROFIT,PO BOX 2110,LANCASTER,CA,93539,Roberta Terry,Finance Director,166,Desert Haven Enterprises,"Multiple authoritative sources (ProPublica, official website, GuideStar) consistently identify the organization as Desert Haven Enterprises, a nonprofit focused on supported employment, aligning with the input name, address in Lancaster CA, and description.[1][2][3]","PO BOX 2110, LANCASTER, CA 93539","Roberta Terry
+Desert Haven Enterprises
+PO BOX 2110, LANCASTER, CA 93539","Roberta Terry
+Desert Haven Enterprises
+PO BOX 2110
+LANCASTER CA 93539",{{Label1}},Done,Yes,Done
+,DESERT HAVEN ENTERPRISES A NON PROFIT,PO BOX 2110,LANCASTER,CA,93539,Ramona Aloyo,HR Director,166,Desert Haven Enterprises,"Multiple sources consistently identify the organization as Desert Haven Enterprises, corroborated by exact address match (PO Box 2110, Lancaster, CA) and activity description aligning with supported employment programs.","PO BOX 2110, LANCASTER, CA 93539","Ramona Aloyo
+Desert Haven Enterprises
+PO BOX 2110, LANCASTER, CA 93539","Ramona Aloyo
+Desert Haven Enterprises
+PO BOX 2110
+LANCASTER CA 93539",{{Label2}},Done,Yes,Done

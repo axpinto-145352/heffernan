@@ -1,0 +1,49 @@
+row number,Primary Name,Street Address,City,State,Zip Code,Prospect,Title,ExMod,Corrected Name,Corrected Name Reasoning,Combined Address,Test Label,Label,Label #,Sent from A. Renewal,Ready to send to Address Labels Doc? (Trigger),Sent to Doc
+,DMS BUILDING CONSTRUCTION CLEAN UP (DBA),1060 RICHFIELD RD,PLACENTIA,CA,92870,Sarah Jurado,CEO,241,DMS Janitorial Services,"The input company name contains an explicit DBA clause. Search results confirm DMS Building Maintenance Inc DBA DMS Construction Clean Up [6], and the company's primary public-facing website and branding uses 'DMS Janitorial Services' [3][4][7]. The address (1060 Richfield Rd, Placentia, CA) and phone (714-996-8400) match across all sources, strongly corroborating that DMS Janitorial Services is the current operating name.","1060 RICHFIELD RD, PLACENTIA, CA 92870","Sarah Jurado
+DMS Janitorial Services
+1060 RICHFIELD RD, PLACENTIA, CA 92870","Sarah Jurado
+DMS Janitorial Services
+1060 RICHFIELD RD
+PLACENTIA CA 92870",{{Label1}},Done,Yes,Done
+,MASCORRO LEATHER (A CORP),5921 SHEILA ST,LOS ANGELES,CA,90040,Yamina Mascorro,COO,180,Mascorro Leather,"Multiple authoritative sources consistently refer to the public-facing name as Mascorro Leather or Mascorro Leather, Inc., corroborated by the company's official website mascorroleather.com; cleaned input by removing corporate designation per fallback rules.","5921 SHEILA ST, LOS ANGELES, CA 90040","Yamina Mascorro
+Mascorro Leather
+5921 SHEILA ST, LOS ANGELES, CA 90040","Yamina Mascorro
+Mascorro Leather
+5921 SHEILA ST
+LOS ANGELES CA 90040",{{Label2}},Done,Yes,Done
+,"PRECAST INNOVATIONS, INC.",1670 N MAIN ST,ORANGE,CA,92867,Chester Valdovinos,President,142,"Precast Innovations, Inc.","The input name matches the consistently documented public-facing name across all official sources (website, business listings, filing records, and physical address at 1670 N Main St, Orange, CA). The corrected name is a standard Title Case cleanup of the input, removing unnecessary punctuation while preserving the established brand identity. No DBA or alternative operating name is present in the search results.","1670 N MAIN ST, ORANGE, CA 92867","Chester Valdovinos
+Precast Innovations, Inc.
+1670 N MAIN ST, ORANGE, CA 92867","Chester Valdovinos
+Precast Innovations, Inc.
+1670 N MAIN ST
+ORANGE CA 92867",{{Label3}},Done,Yes,Done
+,"ROBINSON PRINTING, A DIVISION OF STEVEN LABEL",11926 BURKE ST,SANTA FE SPRINGS,CA,90670,Matthew Sweaney,CEO,197,Robinson Printing,"The input explicitly states 'A DIVISION OF STEVEN LABEL', indicating Robinson Printing as the DBA/division brand. This is corroborated by multiple sources describing it as 'Robinson Printing division' or 'Robinson Printing - A Division of Steven Label' at the matching address 11926 Burke St, Santa Fe Springs, CA.[1][2][5]","11926 BURKE ST, SANTA FE SPRINGS, CA 90670","Matthew Sweaney
+Robinson Printing
+11926 BURKE ST, SANTA FE SPRINGS, CA 90670","Matthew Sweaney
+Robinson Printing
+11926 BURKE ST
+SANTA FE SPRINGS CA 90670",{{Label4}},Done,Yes,Done
+,"ROBINSON PRINTING, A DIVISION OF STEVEN LABEL",11926 BURKE ST,SANTA FE SPRINGS,CA,90670,Michael Zhu,CFO,197,Robinson Printing,"The input name explicitly identifies it as a division, and multiple sources confirm Robinson Printing as the public-facing division name of Steven Label, with exact address match at 11926 Burke St, Santa Fe Springs, CA.[1][2][5]","11926 BURKE ST, SANTA FE SPRINGS, CA 90670","Michael Zhu
+Robinson Printing
+11926 BURKE ST, SANTA FE SPRINGS, CA 90670","Michael Zhu
+Robinson Printing
+11926 BURKE ST
+SANTA FE SPRINGS CA 90670",{{Label5}},Done,Yes,Done
+,"ROBINSON PRINTING, A DIVISION OF STEVEN LABEL",11926 BURKE ST,SANTA FE SPRINGS,CA,90670,Andrea Berg,VP HR,197,Robinson Printing,"The input explicitly states 'ROBINSON PRINTING, A DIVISION OF STEVEN LABEL', identifying Robinson Printing as the DBA/division name. This is corroborated by multiple sources describing it as 'Robinson Printing - A Division of Steven Label' at the matching address 11926 Burke St, Santa Fe Springs, CA.[1][2][5]","11926 BURKE ST, SANTA FE SPRINGS, CA 90670","Andrea Berg
+Robinson Printing
+11926 BURKE ST, SANTA FE SPRINGS, CA 90670","Andrea Berg
+Robinson Printing
+11926 BURKE ST
+SANTA FE SPRINGS CA 90670",{{Label6}},Done,Yes,Done
+,"DELICATE COSMETICS, INC.",10741 SHERMAN WAY #2,SUN VALLEY,CA,91352,Linet Badali,VP Operations,169,Delicate Cosmetics,"Multiple authoritative sources (RocketReach, BBB, Datanyze, ZoomInfo) consistently refer to the company as 'Delicate Cosmetics' or 'Delicate Cosmetics Inc', corroborated by exact address match (10741 Sherman Way #2, Sun Valley, CA). Removed legal suffix 'INC.' for public-facing name per fallback cleanup.","10741 SHERMAN WAY #2, SUN VALLEY, CA 91352","Linet Badali
+Delicate Cosmetics
+10741 SHERMAN WAY #2, SUN VALLEY, CA 91352","Linet Badali
+Delicate Cosmetics
+10741 SHERMAN WAY #2
+SUN VALLEY CA 91352",{{Label7}},Done,Yes,Done
+,"DELICATE COSMETICS, INC.",10741 SHERMAN WAY #2,SUN VALLEY,CA,91352,Violet Badali,Controller,169,Delicate Cosmetics,"Multiple authoritative sources (RocketReach, BBB, Datanyze, ZoomInfo) consistently refer to the business as 'Delicate Cosmetics' or 'Delicate Cosmetics Inc' at the exact provided address, confirming holistic alignment without DBA clause or domain; fallback cleanup removes 'INC.'.","10741 SHERMAN WAY #2, SUN VALLEY, CA 91352","Violet Badali
+Delicate Cosmetics
+10741 SHERMAN WAY #2, SUN VALLEY, CA 91352","Violet Badali
+Delicate Cosmetics
+10741 SHERMAN WAY #2
+SUN VALLEY CA 91352",{{Label8}},Done,Yes,Done
