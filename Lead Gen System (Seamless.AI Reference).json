@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "# REFERENCE WORKFLOW: Seamless.AI Integration\n# =============================================\n# This is a BACKUP/REFERENCE workflow showing how to replace Perplexity revenue/industry\n# lookup with Seamless.AI API calls.\n#\n# CHANGES FROM ORIGINAL:\n# - Step 1: UNCHANGED (Perplexity EE calc)\n# - Step 2: MODIFIED - Only finds domain via Perplexity (no revenue, industry, SIC)\n#           + reformats each company to 5 rows with blank row beneath\n# - Step 3: NEW - Seamless.AI HTTP requests using domain + POC title\n#           to get revenue, industry, SIC code, and matching contact\n#\n# TO ACTIVATE:\n# 1. Replace YOUR_SEAMLESS_AI_API_KEY with the Heffernan IT team's Seamless.AI key\n#    (or create an n8n credential/env var for it)\n# 2. Verify the Seamless.AI API endpoint URLs are current\n# 3. Adjust the POC title field name if your sheet column differs",
+        "content": "# REFERENCE WORKFLOW: Seamless.AI Integration\n# =============================================\n# Replaces Perplexity revenue/industry lookup with Seamless.AI API calls.\n#\n# ARCHITECTURE:\n# - Step 1: EE calc (placeholder - not implemented here)\n# - Step 2: Domain lookup via Perplexity (domain only, no revenue/industry)\n#   -> After ALL domains done, reformats to 5 copied rows per company + blank\n#   -> Appends reformatted rows to sheet, then triggers Google Apps Script formatting\n# - Step 3: Seamless.AI enrichment triggered by Ready for Seamless.AI = Yes\n#   -> Checks seamless_found before writing; marks No Match if not found\n#   -> Both Check nodes loop back on failure so batch never stalls\n#\n# SETUP CHECKLIST:\n# 1. Create an HTTP Header Auth credential in n8n:\n#    - Header Name: Authorization\n#    - Header Value: Bearer YOUR_SEAMLESS_AI_API_KEY\n#    - Replace REPLACE_WITH_SEAMLESS_CREDENTIAL_ID with the credential ID\n# 2. Verify the Seamless.AI API endpoint (https://api.seamless.ai/v1/contacts/search)\n#    - Download OpenAPI spec from https://docs.seamless.ai/ to confirm\n#    - The request format (searches array) may need adjustment per your API tier\n# 3. Set errorWorkflow to your Error Notifier workflow ID (see Lead Gen Error Notifier)\n# 4. Set N8N_BASE_URL environment variable for execution links in error alerts\n# 5. Verify the Prospect column name in your sheet matches exactly (no trailing spaces)\n# 6. Verify Google Apps Script URL is current (changes on redeploy)",
         "height": 480,
         "width": 1200,
         "color": 5
@@ -457,7 +457,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2240, 432],
+      "position": [2000, 368],
       "id": "reformat-5rows",
       "name": "Reformat to 5 Rows + Blank"
     },
@@ -571,18 +571,9 @@
         "url": "https://api.seamless.ai/v1/contacts/search",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"searches\": [\n    {\n      \"field\": \"company_domain\",\n      \"filter\": \"is\",\n      \"value\": \"{{ $json['Domain'] }}\"\n    },\n    {\n      \"field\": \"job_title\",\n      \"filter\": \"contains\",\n      \"value\": \"{{ $json['Title'] || $json['POC Title'] || 'Owner' }}\"\n    }\n  ],\n  \"page\": 1,\n  \"limit\": 1\n}",
+        "jsonBody": "={{ JSON.stringify({ searches: [ { field: 'company_domain', filter: 'is', value: $json['Domain'] || '' }, { field: 'job_title', filter: 'contains', value: $json['Title'] || $json['POC Title'] || 'Owner' } ], page: 1, limit: 1 }) }}",
         "options": {
           "timeout": 30000
         }
@@ -605,7 +596,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Parse Seamless.AI Response\n// Extracts: revenue, industry, SIC code, and matching POC details\n//\n// Seamless.AI contact search returns company + person data together.\n// Adjust field paths based on actual Seamless.AI API response structure.\n//\n// IMPORTANT: Review Seamless.AI docs for exact response schema.\n// The paths below are based on common Seamless.AI response structures.\n// Your IT team may need to adjust these based on your API tier/version.\n\nconst raw = $json;\n\n// Handle different response wrapper shapes\nconst contacts = raw.data || raw.contacts || raw.results || [];\nconst contact = Array.isArray(contacts) ? contacts[0] : contacts;\n\nif (!contact) {\n  return {\n    json: {\n      seamless_found: false,\n      seamless_error: 'No contact found for this domain + title combination',\n      // Pass through original fields\n      bureau_number: raw.bureau_number || '',\n      domain: raw.domain || ''\n    }\n  };\n}\n\n// Extract company data (often nested under contact.company or at top level)\nconst company = contact.company || contact.organization || {};\n\nconst revenue = company.revenue || company.annual_revenue || company.estimated_revenue || null;\nconst industry = company.industry || company.primary_industry || null;\nconst sicCode = company.sic_code || company.sic || company.naics_code || null;\nconst companyName = company.name || company.company_name || null;\nconst employeeCount = company.employee_count || company.num_employees || null;\n\n// Format revenue for display\nlet revenueDisplay = null;\nif (revenue) {\n  const num = typeof revenue === 'number' ? revenue : parseFloat(String(revenue).replace(/[^\\d.]/g, ''));\n  if (!isNaN(num) && num > 0) {\n    const millions = num / 1000000;\n    revenueDisplay = `$${(Math.round(millions * 10) / 10).toFixed(1)}M`;\n  } else if (typeof revenue === 'string') {\n    revenueDisplay = revenue; // Use as-is if it's already formatted\n  }\n}\n\n// Extract POC (person) data\nconst pocFirstName = contact.first_name || contact.firstName || '';\nconst pocLastName = contact.last_name || contact.lastName || '';\nconst pocFullName = [pocFirstName, pocLastName].filter(v => v).join(' ');\nconst pocTitle = contact.job_title || contact.title || contact.position || '';\nconst pocEmail = contact.email || contact.work_email || contact.emails?.[0] || '';\nconst pocPhone = contact.phone || contact.direct_phone || contact.phones?.[0] || '';\nconst pocLinkedIn = contact.linkedin_url || contact.linkedin || contact.social_profiles?.linkedin || '';\n\nreturn {\n  json: {\n    seamless_found: true,\n\n    // Company enrichment\n    revenue_value: revenue,\n    revenue_display: revenueDisplay,\n    industry: industry,\n    sic_code: sicCode,\n    company_name_seamless: companyName,\n    employee_count_seamless: employeeCount,\n\n    // POC data\n    poc_name: pocFullName,\n    poc_first_name: pocFirstName,\n    poc_last_name: pocLastName,\n    poc_title: pocTitle,\n    poc_email: pocEmail,\n    poc_phone: pocPhone,\n    poc_linkedin: pocLinkedIn,\n\n    // Raw response for debugging\n    seamless_raw: contact\n  }\n};\n"
+        "jsCode": "// Parse Seamless.AI Response\n// Extracts: revenue, industry, SIC code, and matching POC details\n// Passes through Bureau Number + Domain from batch loop context for resilience.\n//\n// IMPORTANT: Verify field names against your Seamless.AI API tier/version\n// at https://docs.seamless.ai/ (requires authenticated account).\n\nconst raw = $json;\n\n// Pass through original identifiers from batch loop for resilience\nconst batchItem = $('Seamless.AI Batch Loop').item.json;\nconst bureauNumber = batchItem['Bureau Number'] || '';\nconst domain = batchItem['Domain'] || '';\n\n// Detect HTTP error responses\nif (raw.statusCode && raw.statusCode >= 400) {\n  return {\n    json: {\n      seamless_found: false,\n      seamless_error: `HTTP ${raw.statusCode}: ${raw.message || 'API error'}`,\n      bureau_number: bureauNumber,\n      domain: domain\n    }\n  };\n}\n\n// Handle different response wrapper shapes\nconst contacts = raw.data || raw.contacts || raw.results || [];\nconst contact = Array.isArray(contacts) ? contacts[0] : contacts;\n\nif (!contact) {\n  return {\n    json: {\n      seamless_found: false,\n      seamless_error: 'No contact found for this domain + title combination',\n      bureau_number: bureauNumber,\n      domain: domain\n    }\n  };\n}\n\n// Extract company data\nconst company = contact.company || contact.organization || {};\n\nconst revenue = company.revenue || company.annual_revenue || company.estimated_revenue || null;\nconst industry = company.industry || company.primary_industry || null;\nconst sicCode = company.sic_code || company.sic || null;\nconst naicsCode = company.naics_code || company.naics || null;\nconst companyName = company.name || company.company_name || null;\n\n// Format revenue - handles both raw numbers AND string ranges\n// Seamless.AI may return strings like '$10M-$50M' or numbers like 50000000\nlet revenueDisplay = null;\nif (revenue != null) {\n  if (typeof revenue === 'number') {\n    const millions = revenue / 1000000;\n    revenueDisplay = `$${(Math.round(millions * 10) / 10).toFixed(1)}M`;\n  } else if (typeof revenue === 'string') {\n    const cleaned = revenue.replace(/[^\\d.]/g, '');\n    const num = parseFloat(cleaned);\n    if (!isNaN(num) && num > 1000) {\n      // Looks like raw dollars, convert to millions\n      const millions = num / 1000000;\n      revenueDisplay = `$${(Math.round(millions * 10) / 10).toFixed(1)}M`;\n    } else {\n      // Already formatted or a range string - use as-is\n      revenueDisplay = revenue;\n    }\n  }\n}\n\n// Extract POC (person) data\nconst pocFirstName = contact.first_name || contact.firstName || '';\nconst pocLastName = contact.last_name || contact.lastName || '';\nconst pocFullName = [pocFirstName, pocLastName].filter(v => v).join(' ');\nconst pocTitle = contact.job_title || contact.title || contact.position || '';\nconst pocEmail = contact.email || contact.work_email || contact.emails?.[0] || '';\nconst pocPhone = contact.phone || contact.direct_phone || contact.phones?.[0] || '';\nconst pocLinkedIn = contact.linkedin_url || contact.linkedin || contact.social_profiles?.linkedin || '';\n\nreturn {\n  json: {\n    seamless_found: true,\n    bureau_number: bureauNumber,\n    domain: domain,\n\n    // Company enrichment\n    revenue_display: revenueDisplay,\n    industry: industry,\n    sic_code: sicCode,\n    naics_code: naicsCode,\n    company_name_seamless: companyName,\n\n    // POC data\n    poc_name: pocFullName,\n    poc_first_name: pocFirstName,\n    poc_last_name: pocLastName,\n    poc_title: pocTitle,\n    poc_email: pocEmail,\n    poc_phone: pocPhone,\n    poc_linkedin: pocLinkedIn\n  }\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -636,7 +627,7 @@
             "Industry": "={{ $json.industry }}",
             "SIC Code": "={{ $json.sic_code }}",
             "For-Profit/Non-Profit": "={{ $json.industry ? 'General' : '' }}",
-            "Prospect        ": "={{ $json.poc_name }}",
+            "Prospect": "={{ $json.poc_name }}",
             "Title": "={{ $json.poc_title }}",
             "LI Profile": "={{ $json.poc_linkedin }}",
             "Updated?": "=Done",
@@ -649,7 +640,7 @@
             { "id": "Industry", "displayName": "Industry", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
             { "id": "SIC Code", "displayName": "SIC Code", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
             { "id": "For-Profit/Non-Profit", "displayName": "For-Profit/Non-Profit", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
-            { "id": "Prospect        ", "displayName": "Prospect        ", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Prospect", "displayName": "Prospect", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
             { "id": "Title", "displayName": "Title", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
             { "id": "LI Profile", "displayName": "LI Profile", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
             { "id": "Updated?", "displayName": "Updated?", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
@@ -662,7 +653,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [1088, 800],
+      "position": [1200, 760],
       "id": "seamless-update-renewal",
       "name": "Update Renewal (Seamless.AI)",
       "credentials": {
@@ -701,7 +692,114 @@
       "position": [1504, 800],
       "id": "seamless-cooldown",
       "name": "Seamless.AI Cooldown",
-      "webhookId": "seamless-cooldown-webhook"
+      "webhookId": "a7c3e91f-2b84-4d67-9e15-f3a8c6d2b401"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2480, 368],
+      "id": "append-reformatted-rows",
+      "name": "Append Reformatted Rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [480, 160],
+      "id": "step1-placeholder",
+      "name": "Step 1 EE Placeholder (not implemented)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "seamless-found-check",
+              "leftValue": "={{ $json.seamless_found }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1000, 800],
+      "id": "seamless-found-check",
+      "name": "Seamless Found?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bureau Number": "={{ $('Seamless.AI Batch Loop').item.json['Bureau Number'] }}",
+            "Updated?": "=Seamless.AI: No Match",
+            "POC Done": "=Seamless.AI (no match)"
+          },
+          "matchingColumns": ["Bureau Number"],
+          "schema": [
+            { "id": "Bureau Number", "displayName": "Bureau Number", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Updated?", "displayName": "Updated?", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "POC Done", "displayName": "POC Done", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1200, 920],
+      "id": "seamless-no-match-update",
+      "name": "Mark No Match",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -711,7 +809,7 @@
     },
     "Has Bureau Number": {
       "main": [
-        [{ "node": "NOTE: Step 1 EE nodes go here", "type": "main", "index": 0 }]
+        [{ "node": "Step 1 EE Placeholder (not implemented)", "type": "main", "index": 0 }]
       ]
     },
 
@@ -749,9 +847,15 @@
     },
     "Domain Batch Loop": {
       "main": [
-        [{ "node": "Send Format Rows trigger once", "type": "main", "index": 0 }],
+        [{ "node": "Reformat to 5 Rows + Blank", "type": "main", "index": 0 }],
         [{ "node": "Domain Lookup (Perplexity)", "type": "main", "index": 0 }]
       ]
+    },
+    "Reformat to 5 Rows + Blank": {
+      "main": [[{ "node": "Append Reformatted Rows", "type": "main", "index": 0 }]]
+    },
+    "Append Reformatted Rows": {
+      "main": [[{ "node": "Send Format Rows trigger once", "type": "main", "index": 0 }]]
     },
     "Domain Lookup (Perplexity)": {
       "main": [[{ "node": "Parse Domain Only", "type": "main", "index": 0 }]]
@@ -760,16 +864,16 @@
       "main": [[{ "node": "Update Renewal (Domain Only)", "type": "main", "index": 0 }]]
     },
     "Update Renewal (Domain Only)": {
-      "main": [[{ "node": "Reformat to 5 Rows + Blank", "type": "main", "index": 0 }]]
-    },
-    "Reformat to 5 Rows + Blank": {
       "main": [[{ "node": "Wait Domain Cooldown", "type": "main", "index": 0 }]]
     },
     "Wait Domain Cooldown": {
       "main": [[{ "node": "Check Domain Updated OK", "type": "main", "index": 0 }]]
     },
     "Check Domain Updated OK": {
-      "main": [[{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Domain Batch Loop", "type": "main", "index": 0 }],
+        [{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]
+      ]
     },
     "Send Format Rows trigger once": {
       "main": [[{ "node": "Format Rows", "type": "main", "index": 0 }]]
@@ -797,13 +901,25 @@
       "main": [[{ "node": "Parse Seamless.AI Response", "type": "main", "index": 0 }]]
     },
     "Parse Seamless.AI Response": {
-      "main": [[{ "node": "Update Renewal (Seamless.AI)", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Seamless Found?", "type": "main", "index": 0 }]]
+    },
+    "Seamless Found?": {
+      "main": [
+        [{ "node": "Update Renewal (Seamless.AI)", "type": "main", "index": 0 }],
+        [{ "node": "Mark No Match", "type": "main", "index": 0 }]
+      ]
     },
     "Update Renewal (Seamless.AI)": {
       "main": [[{ "node": "Check Seamless Updated OK", "type": "main", "index": 0 }]]
     },
+    "Mark No Match": {
+      "main": [[{ "node": "Check Seamless Updated OK", "type": "main", "index": 0 }]]
+    },
     "Check Seamless Updated OK": {
-      "main": [[{ "node": "Seamless.AI Cooldown", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Seamless.AI Cooldown", "type": "main", "index": 0 }],
+        [{ "node": "Seamless.AI Cooldown", "type": "main", "index": 0 }]
+      ]
     },
     "Seamless.AI Cooldown": {
       "main": [[{ "node": "Seamless.AI Batch Loop", "type": "main", "index": 0 }]]
