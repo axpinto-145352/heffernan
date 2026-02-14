@@ -7500,7 +7500,7 @@
     "availableInMCP": false,
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
   },
   "versionId": "498ae5bd-780d-4468-87c0-f81b9c28b88e",
   "meta": {

@@ -815,7 +815,7 @@
     "availableInMCP": false,
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
   },
   "versionId": "seamless-ai-reference-v1",
   "meta": {
