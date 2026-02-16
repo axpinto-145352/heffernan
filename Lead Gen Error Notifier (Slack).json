@@ -1,0 +1,141 @@
+{
+  "name": "Lead Gen Error Notifier (Slack)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Lead Gen Error Notifier\n# ======================\n# This workflow fires automatically when any node in the Lead Gen System fails.\n#\n# SETUP:\n# 1. Import this workflow into n8n\n# 2. Create a Slack OAuth2 credential in n8n (Settings → Credentials → Add → Slack)\n#    - Required scopes: chat:write, chat:write.public\n# 3. Replace REPLACE_WITH_SLACK_CREDENTIAL_ID below with your credential ID\n# 4. Update the Slack channel name (default: #lead-gen-alerts)\n# 5. Copy this workflow's ID from the URL bar (e.g. PjYup8gyZbIyDeZT)\n# 6. Go to Lead Gen System → Settings → Error Workflow → paste that ID\n# 7. Activate this workflow\n#\n# WHAT YOU GET:\n# On failure → Slack message with: workflow name, failed node, error message,\n# execution ID (clickable link), and timestamp.",
+        "height": 300,
+        "width": 700,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-100, -200],
+      "typeVersion": 1,
+      "id": "error-readme",
+      "name": "README"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "id": "error-trigger-node",
+      "name": "On Workflow Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract error details from the Error Trigger payload\nconst errorData = $input.first().json;\n\nconst workflow = errorData.workflow || {};\nconst execution = errorData.execution || {};\nconst error = execution.error || {};\n\nconst workflowName = workflow.name || 'Unknown Workflow';\nconst workflowId = workflow.id || '';\nconst executionId = execution.id || '';\nconst failedNodeName = error.node?.name || error.nodeName || 'Unknown Node';\nconst failedNodeType = error.node?.type || '';\nconst errorMessage = error.message || 'No error message available';\nconst errorStack = error.stack || '';\nconst timestamp = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });\n\n// Build the n8n execution URL (adjust base URL if self-hosted)\nconst n8nBaseUrl = $env.N8N_BASE_URL || 'https://your-n8n-instance.com';\nconst executionUrl = `${n8nBaseUrl}/workflow/${workflowId}/executions/${executionId}`;\n\n// Truncate stack trace for readability\nconst shortStack = errorStack.length > 500\n  ? errorStack.substring(0, 500) + '...'\n  : errorStack;\n\nreturn [{\n  json: {\n    workflowName,\n    workflowId,\n    executionId,\n    executionUrl,\n    failedNodeName,\n    failedNodeType,\n    errorMessage,\n    shortStack,\n    timestamp\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 200],
+      "id": "format-error-details",
+      "name": "Format Error Details"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": {
+          "__rl": true,
+          "value": "#lead-gen-alerts",
+          "mode": "name"
+        },
+        "messageType": "block",
+        "blocksUi": {
+          "blocksValues": [
+            {
+              "type": "header",
+              "textValue": "={{ ':rotating_light: Lead Gen Workflow Failed' }}"
+            },
+            {
+              "type": "section",
+              "textValue": "={{ '*Workflow:* ' + $json.workflowName + '\\n*Failed Node:* `' + $json.failedNodeName + '`\\n*Node Type:* ' + $json.failedNodeType + '\\n*Time:* ' + $json.timestamp }}"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "section",
+              "textValue": "={{ '*Error Message:*\\n```' + $json.errorMessage + '```' }}"
+            },
+            {
+              "type": "section",
+              "textValue": "={{ '*Stack Trace:*\\n```' + $json.shortStack + '```' }}"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "actions",
+              "elementsValues": [
+                {
+                  "type": "button",
+                  "textValue": "View Execution",
+                  "url": "={{ $json.executionUrl }}",
+                  "style": "danger"
+                }
+              ]
+            }
+          ]
+        },
+        "otherOptions": {
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [680, 200],
+      "id": "slack-error-alert",
+      "name": "Send Slack Alert",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack Lead Gen Alerts"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "error-notifier-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "ef3884035190f04f6d774f0cbf3faf455fb95d0d8be8da8aef3e801074c4f309"
+  },
+  "id": "LeadGenErrorNotifier",
+  "tags": [
+    { "name": "error-handling" },
+    { "name": "lead-gen" }
+  ]
+}

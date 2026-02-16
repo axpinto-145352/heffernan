@@ -1,0 +1,946 @@
+{
+  "name": "Lead Gen System (Seamless.AI Reference)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# REFERENCE WORKFLOW: Seamless.AI Integration\n# =============================================\n# Replaces Perplexity revenue/industry lookup with Seamless.AI API calls.\n#\n# ARCHITECTURE:\n# - Step 1: EE calc (placeholder - not implemented here)\n# - Step 2: Domain lookup via Perplexity (domain only, no revenue/industry)\n#   -> After ALL domains done, reformats to 5 copied rows per company + blank\n#   -> Appends reformatted rows to sheet, then triggers Google Apps Script formatting\n# - Step 3: Seamless.AI enrichment triggered by Ready for Seamless.AI = Yes\n#   -> Checks seamless_found before writing; marks No Match if not found\n#   -> Both Check nodes loop back on failure so batch never stalls\n#\n# SETUP CHECKLIST:\n# 1. Create an HTTP Header Auth credential in n8n:\n#    - Header Name: Authorization\n#    - Header Value: Bearer YOUR_SEAMLESS_AI_API_KEY\n#    - Replace REPLACE_WITH_SEAMLESS_CREDENTIAL_ID with the credential ID\n# 2. Verify the Seamless.AI API endpoint (https://api.seamless.ai/v1/contacts/search)\n#    - Download OpenAPI spec from https://docs.seamless.ai/ to confirm\n#    - The request format (searches array) may need adjustment per your API tier\n# 3. Set errorWorkflow to your Error Notifier workflow ID (see Lead Gen Error Notifier)\n# 4. Set N8N_BASE_URL environment variable for execution links in error alerts\n# 5. Verify the Prospect column name in your sheet matches exactly (no trailing spaces)\n# 6. Verify Google Apps Script URL is current (changes on redeploy)",
+        "height": 480,
+        "width": 1200,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-400, -200],
+      "typeVersion": 1,
+      "id": "ref-note-main",
+      "name": "README"
+    },
+    {
+      "parameters": {
+        "content": "# Step 1: Process New WC prospects and find EE\n# (UNCHANGED from original workflow)",
+        "height": 352,
+        "width": 2896,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [0, 0],
+      "typeVersion": 1,
+      "id": "cb84777e-2f42-41a9-a1e2-136b9f653d68",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Step 2: Find DOMAIN ONLY (via Perplexity) + Reformat to 5 rows per company\n# MODIFIED: Removed revenue, industry, SIC, FP/NP from Perplexity.\n# Those fields now come from Seamless.AI in Step 3.",
+        "height": 336,
+        "width": 2896,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [0, 352],
+      "typeVersion": 1,
+      "id": "416a5410-4a5f-4601-beda-46971c490a32",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# Step 3: Seamless.AI Enrichment\n# NEW: Uses domain + POC title to fetch:\n#   - Company revenue, industry, SIC code\n#   - Specific POC matching the target title (e.g. COO)\n# Uses Heffernan IT team's Seamless.AI API connection",
+        "height": 500,
+        "width": 3200,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [0, 700],
+      "typeVersion": 1,
+      "id": "seamless-step3-note",
+      "name": "Sticky Note - Step 3"
+    },
+
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "0. NEW HERE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit#gid=0"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [64, 160],
+      "id": "4193c9e5-d667-4ef3-bec8-cd06d0d7d5a5",
+      "name": "Google Sheets Trigger1",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "8ZGBY0PyadPJ9WWA",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
+          "conditions": [
+            {
+              "id": "594c2593-4d54-427c-87d5-a4e915f39d64",
+              "leftValue": "={{ $json['Bureau Number'] }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [272, 160],
+      "id": "95521297-8e66-42be-ae92-869903e1221a",
+      "name": "Has Bureau Number"
+    },
+
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit#gid=861775990"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [48, 432],
+      "id": "65d1acc3-14d7-4897-b1ae-e35cd59614ce",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "8ZGBY0PyadPJ9WWA",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            {
+              "id": "d9b89176-f2b1-4265-9bc3-0982f928c67a",
+              "leftValue": "={{ $json['Updated?'] }}",
+              "rightValue": "Processing",
+              "operator": { "type": "string", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [192, 432],
+      "id": "d338ae6e-3891-4337-a90a-0520f6bdecbf",
+      "name": "Filter Not Processing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            {
+              "id": "d9b89176-f2b1-4265-9bc3-0982f928c67a",
+              "leftValue": "={{ $json['Updated?'] }}",
+              "rightValue": "Done",
+              "operator": { "type": "string", "operation": "notEquals" }
+            },
+            {
+              "id": "5191d5bb-5f1a-4652-9fb0-4dca647f6a5e",
+              "leftValue": "={{ $json['Bureau Number'] }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [336, 560],
+      "id": "4381415a-4707-4e26-98aa-0300f32696c9",
+      "name": "Filter Not Done Revenue"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [672, 496],
+      "id": "08fea967-a7e4-4aeb-ad18-5c8d7c152ac1",
+      "name": "Renewal1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1856185975,
+          "mode": "list",
+          "cachedResultName": "Prompts"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "C1:D2"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [784, 496],
+      "id": "146f13a2-f166-4a2b-a1ca-3f057cdb5f1c",
+      "name": "Fetch Domain Prompts",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [944, 448],
+      "id": "72fe1463-1777-4827-af3e-229c82580a3c",
+      "name": "Merge Domain + Prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine data1 — attach prompts to each renewal row\n// (Same logic as original Combine data1)\n\nfunction isPlainObject(v) {\n  return v !== null && typeof v === 'object' && !Array.isArray(v);\n}\nfunction deepClone(v) {\n  try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }\n}\n\nconst incoming = $input.all().map(i => (i && i.json) ? i.json : {});\nif (incoming.length === 0) {\n  return [{ json: { error: 'No incoming items to Combine data1.' } }];\n}\n\nfunction looksLikePrompts(obj) {\n  if (!isPlainObject(obj)) return false;\n  const hasRevenueUser = typeof obj['Revenue User Message'] === 'string';\n  const hasRevenueSystem = typeof obj['Revenue System Message'] === 'string';\n  if (hasRevenueUser && hasRevenueSystem) return true;\n  const hasAnyMessageKey = Object.keys(obj).some(k => /message/i.test(k));\n  const hasRenewalKey = obj['Bureau Number'] != null || obj['Primary Name'] != null;\n  return hasAnyMessageKey && !hasRenewalKey;\n}\n\nfunction looksLikeRenewal(obj) {\n  if (!isPlainObject(obj)) return false;\n  return obj['Bureau Number'] != null || obj['Primary Name'] != null;\n}\n\nconst promptItems = incoming.filter(looksLikePrompts);\nconst renewalItems = incoming.filter(looksLikeRenewal);\nconst fallbackRenewals = renewalItems.length > 0 ? renewalItems : incoming.filter(o => !looksLikePrompts(o));\n\nif (promptItems.length === 0) {\n  return [{ json: { error: 'No Prompts item found.' } }];\n}\n\nconst prompts = {};\nfor (const p of promptItems) {\n  if (isPlainObject(p)) Object.assign(prompts, deepClone(p));\n}\n\nif (fallbackRenewals.length === 0) {\n  return [{ json: { error: 'No Renewal items found.' } }];\n}\n\nreturn fallbackRenewals.map(rowRaw => {\n  const row = deepClone(rowRaw);\n  if (isPlainObject(row) && row.prompts) delete row.prompts;\n  return { json: { ...row, prompts } };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1072, 448],
+      "id": "6c318b17-b03b-48e9-a9ad-ecc013504594",
+      "name": "Combine data1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 3 },
+          "conditions": [
+            {
+              "id": "fc773bd9-140c-4a48-b5ed-be554a9b3d3c",
+              "leftValue": "={{ $json['Updated?'] }}",
+              "rightValue": "Done",
+              "operator": { "type": "string", "operation": "notEquals" }
+            },
+            {
+              "id": "a617ef35-62f5-46ac-8a1f-d11325387672",
+              "leftValue": "={{ $json['Bureau Number'] }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1232, 496],
+      "id": "57251124-8379-458b-883b-9d4cd952e7f6",
+      "name": "Filter Unprocessed Domain"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dedupe companies before batch loop (same as original)\nconst items = $input.all();\nfunction getKey(j) {\n  const bureau = j['Bureau Number'] ?? j['BureauNumber'] ?? null;\n  const name = j['Primary Name'] ?? j['PrimaryName'] ?? null;\n  const domain = j['Domain'] ?? j['domain'] ?? null;\n  return String(bureau ?? domain ?? name ?? '').trim().toLowerCase();\n}\nconst seen = new Set();\nconst out = [];\nfor (const item of items) {\n  const key = getKey(item.json);\n  if (!key) { out.push(item); continue; }\n  if (!seen.has(key)) { seen.add(key); out.push(item); }\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1456, 432],
+      "id": "3894d8f9-30c2-4a97-9c16-2aed49a639ab",
+      "name": "Dedupe"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1616, 432],
+      "id": "d2bb5dd0-be5f-45eb-824c-b2dc9e4eb7f9",
+      "name": "Domain Batch Loop",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "sonar-pro",
+        "messages": {
+          "message": [
+            {
+              "content": "={{ $json.prompts['Revenue System Message'] }}",
+              "role": "system"
+            },
+            {
+              "content": "=Company Name: {{ $json['Primary Name'] }}\n\nAddress Details:\nStreet: {{ $json['Street Address'] }}\nCity: {{ $json.City }}\nState: CA\n\n{{ $json.prompts['Revenue User Message'] }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [1776, 512],
+      "id": "66e3ccb0-b35c-4686-af9e-6789df284a84",
+      "name": "Domain Lookup (Perplexity)",
+      "credentials": {
+        "perplexityApi": {
+          "id": "ZvICVqGzHHK8ddU0",
+          "name": "Perplexity account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse Domain Data — DOMAIN ONLY extraction\n// MODIFIED: Only extracts company_domain from Perplexity response.\n// Revenue, industry, SIC, FP/NP are now handled by Seamless.AI in Step 3.\n\nconst incoming = $json;\nconst wrapper = Array.isArray(incoming) ? (incoming[0] || {}) : (incoming && typeof incoming === 'object' ? incoming : {});\nconst data = { ...wrapper };\n\nlet rawContent = wrapper.choices?.[0]?.message?.content ?? wrapper.text ?? '';\nif (typeof rawContent !== 'string') rawContent = String(rawContent || '');\n\nconst thinkRegex = /<think>[\\s\\S]*?<\\/think>\\s*/gi;\nlet content = rawContent.replace(thinkRegex, '').trim();\n\n// Try to parse JSON from content\nlet parsedJson = null;\n\nfunction extractTopLevelJson(str) {\n  const start = str.indexOf('{');\n  if (start === -1) return null;\n  let depth = 0, inString = false, escaped = false, end = -1;\n  for (let i = start; i < str.length; i++) {\n    const ch = str[i];\n    if (escaped) { escaped = false; continue; }\n    if (ch === '\\\\') { escaped = true; continue; }\n    if (ch === '\"') { inString = !inString; continue; }\n    if (inString) continue;\n    if (ch === '{') depth++;\n    if (ch === '}') depth--;\n    if (depth === 0) { end = i + 1; break; }\n  }\n  if (end === -1) return null;\n  return str.slice(start, end);\n}\n\n// Try fenced JSON\nconst fenced = content.match(/```json\\s*([\\s\\S]*?)```/i);\nif (fenced && fenced[1]) {\n  try { parsedJson = JSON.parse(fenced[1]); } catch (e) {}\n}\nif (!parsedJson) {\n  try { parsedJson = JSON.parse(content); } catch (e) {}\n}\nif (!parsedJson) {\n  const extracted = extractTopLevelJson(content);\n  if (extracted) { try { parsedJson = JSON.parse(extracted); } catch (e) {} }\n}\n\n// Extract ONLY domain\nlet companyDomain = null;\nlet domainReasoning = null;\n\nif (parsedJson && typeof parsedJson === 'object') {\n  if (typeof parsedJson.company_domain === 'string' && parsedJson.company_domain.trim()) {\n    companyDomain = parsedJson.company_domain.trim();\n  }\n  if (typeof parsedJson.domain_reasoning === 'string' && parsedJson.domain_reasoning.trim()) {\n    domainReasoning = parsedJson.domain_reasoning.trim();\n  }\n}\n\ndata.company_domain = companyDomain;\ndata.domain_reasoning = domainReasoning;\n\nreturn data;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1936, 512],
+      "id": "c6e11a90-8584-452e-90d9-a938546b98af",
+      "name": "Parse Domain Only"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bureau Number": "={{ $('Domain Batch Loop').item.json['Bureau Number'] }}",
+            "Domain": "={{ $json.company_domain }}",
+            "Updated?": "=Domain Done",
+            "Ready for Seamless.AI": "Yes"
+          },
+          "matchingColumns": ["Bureau Number"],
+          "schema": [
+            { "id": "Bureau Number", "displayName": "Bureau Number", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Domain", "displayName": "Domain", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Updated?", "displayName": "Updated?", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Ready for Seamless.AI", "displayName": "Ready for Seamless.AI", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2080, 512],
+      "id": "e7896edf-f010-42c9-b01e-81373b8caf3e",
+      "name": "Update Renewal (Domain Only)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "204703a4-87bb-4b9d-b61e-f008180ce6f4",
+              "leftValue": "={{ $('Domain Batch Loop').item.json['Bureau Number'] }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2512, 528],
+      "id": "0d669554-fc2b-4a6c-86a5-83799a1213ef",
+      "name": "Check Domain Updated OK"
+    },
+    {
+      "parameters": { "amount": 15 },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2352, 544],
+      "id": "1301fa7d-acb9-4380-8eac-bfabf43ac7ea",
+      "name": "Wait Domain Cooldown",
+      "webhookId": "16b405e8-6215-40ac-83b1-4a9c3ee86419"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reformat to 5 copied rows per company + blank row\n// Run Once for All Items\n// For each company, duplicates the FULL company row 5 times\n// (all fields intact), then adds a blank separator row beneath.\n// This gives you 5 identical rows to work with per company\n// (e.g. for multiple POC slots or Seamless.AI enrichment passes).\n\nconst items = $input.all();\nconst out = [];\n\nfor (const item of items) {\n  const r = item.json || {};\n\n  // 5 full copies of the company row\n  for (let i = 1; i <= 5; i++) {\n    out.push({ json: { ...r, '_copy': i } });\n  }\n\n  // Blank separator row\n  out.push({ json: { '_copy': 0, '_separator': true } });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 368],
+      "id": "reformat-5rows",
+      "name": "Reformat to 5 Rows + Blank"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Trigger Format Rows call once\nreturn [{ json: { trigger: 'reformatARenewalRowsMenu' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1856, 368],
+      "id": "1d234c53-a82c-4ccf-9fce-9664c65c8304",
+      "name": "Send Format Rows trigger once"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://script.google.com/macros/s/AKfycbwm-4_STkCPYKSqEDYu-XHPi6WuQs8Sy5s5FhRc6JAolTsRlvRyhNrcs2nFo_t6DtVKbQ/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"trigger\": \"reformatARenewalRowsMenu\" }\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2160, 368],
+      "id": "5e840a3b-ca27-4125-a935-c42fc4b1eb4b",
+      "name": "Format Rows"
+    },
+
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "event": "rowUpdate",
+        "options": {
+          "columnsToWatch": ["Ready for Seamless.AI"]
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [48, 800],
+      "id": "seamless-trigger",
+      "name": "Trigger Seamless.AI Enrichment",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "8ZGBY0PyadPJ9WWA",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [
+            {
+              "id": "seamless-filter-1",
+              "leftValue": "={{ $json['Ready for Seamless.AI'] }}",
+              "rightValue": "Yes",
+              "operator": { "type": "string", "operation": "equals" }
+            },
+            {
+              "id": "seamless-filter-2",
+              "leftValue": "={{ $json['Domain'] }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            },
+            {
+              "id": "seamless-filter-3",
+              "leftValue": "={{ $json['Revenue ($M)'] }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "empty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [256, 800],
+      "id": "seamless-filter-ready",
+      "name": "Filter Ready for Seamless.AI"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [464, 800],
+      "id": "seamless-batch-loop",
+      "name": "Seamless.AI Batch Loop"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.seamless.ai/v1/contacts/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ searches: [ { field: 'company_domain', filter: 'is', value: $json['Domain'] || '' }, { field: 'job_title', filter: 'contains', value: $json['Title'] || $json['POC Title'] || 'Owner' } ], page: 1, limit: 1 }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [672, 800],
+      "id": "seamless-contact-search",
+      "name": "Seamless.AI Contact Search",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_SEAMLESS_CREDENTIAL_ID",
+          "name": "Seamless.AI API Key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse Seamless.AI Response\n// Extracts: revenue, industry, SIC code, and matching POC details\n// Passes through Bureau Number + Domain from batch loop context for resilience.\n//\n// IMPORTANT: Verify field names against your Seamless.AI API tier/version\n// at https://docs.seamless.ai/ (requires authenticated account).\n\nconst raw = $json;\n\n// Pass through original identifiers from batch loop for resilience\nconst batchItem = $('Seamless.AI Batch Loop').item.json;\nconst bureauNumber = batchItem['Bureau Number'] || '';\nconst domain = batchItem['Domain'] || '';\n\n// Detect HTTP error responses\nif (raw.statusCode && raw.statusCode >= 400) {\n  return {\n    json: {\n      seamless_found: false,\n      seamless_error: `HTTP ${raw.statusCode}: ${raw.message || 'API error'}`,\n      bureau_number: bureauNumber,\n      domain: domain\n    }\n  };\n}\n\n// Handle different response wrapper shapes\nconst contacts = raw.data || raw.contacts || raw.results || [];\nconst contact = Array.isArray(contacts) ? contacts[0] : contacts;\n\nif (!contact) {\n  return {\n    json: {\n      seamless_found: false,\n      seamless_error: 'No contact found for this domain + title combination',\n      bureau_number: bureauNumber,\n      domain: domain\n    }\n  };\n}\n\n// Extract company data\nconst company = contact.company || contact.organization || {};\n\nconst revenue = company.revenue || company.annual_revenue || company.estimated_revenue || null;\nconst industry = company.industry || company.primary_industry || null;\nconst sicCode = company.sic_code || company.sic || null;\nconst naicsCode = company.naics_code || company.naics || null;\nconst companyName = company.name || company.company_name || null;\n\n// Format revenue - handles both raw numbers AND string ranges\n// Seamless.AI may return strings like '$10M-$50M' or numbers like 50000000\nlet revenueDisplay = null;\nif (revenue != null) {\n  if (typeof revenue === 'number') {\n    const millions = revenue / 1000000;\n    revenueDisplay = `$${(Math.round(millions * 10) / 10).toFixed(1)}M`;\n  } else if (typeof revenue === 'string') {\n    const cleaned = revenue.replace(/[^\\d.]/g, '');\n    const num = parseFloat(cleaned);\n    if (!isNaN(num) && num > 1000) {\n      // Looks like raw dollars, convert to millions\n      const millions = num / 1000000;\n      revenueDisplay = `$${(Math.round(millions * 10) / 10).toFixed(1)}M`;\n    } else {\n      // Already formatted or a range string - use as-is\n      revenueDisplay = revenue;\n    }\n  }\n}\n\n// Extract POC (person) data\nconst pocFirstName = contact.first_name || contact.firstName || '';\nconst pocLastName = contact.last_name || contact.lastName || '';\nconst pocFullName = [pocFirstName, pocLastName].filter(v => v).join(' ');\nconst pocTitle = contact.job_title || contact.title || contact.position || '';\nconst pocEmail = contact.email || contact.work_email || contact.emails?.[0] || '';\nconst pocPhone = contact.phone || contact.direct_phone || contact.phones?.[0] || '';\nconst pocLinkedIn = contact.linkedin_url || contact.linkedin || contact.social_profiles?.linkedin || '';\n\nreturn {\n  json: {\n    seamless_found: true,\n    bureau_number: bureauNumber,\n    domain: domain,\n\n    // Company enrichment\n    revenue_display: revenueDisplay,\n    industry: industry,\n    sic_code: sicCode,\n    naics_code: naicsCode,\n    company_name_seamless: companyName,\n\n    // POC data\n    poc_name: pocFullName,\n    poc_first_name: pocFirstName,\n    poc_last_name: pocLastName,\n    poc_title: pocTitle,\n    poc_email: pocEmail,\n    poc_phone: pocPhone,\n    poc_linkedin: pocLinkedIn\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 800],
+      "id": "seamless-parse-response",
+      "name": "Parse Seamless.AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bureau Number": "={{ $('Seamless.AI Batch Loop').item.json['Bureau Number'] }}",
+            "Revenue ($M)": "={{ $json.revenue_display }}",
+            "Industry": "={{ $json.industry }}",
+            "SIC Code": "={{ $json.sic_code }}",
+            "For-Profit/Non-Profit": "={{ $json.industry ? 'General' : '' }}",
+            "Prospect": "={{ $json.poc_name }}",
+            "Title": "={{ $json.poc_title }}",
+            "LI Profile": "={{ $json.poc_linkedin }}",
+            "Updated?": "=Done",
+            "POC Done": "=Seamless.AI"
+          },
+          "matchingColumns": ["Bureau Number"],
+          "schema": [
+            { "id": "Bureau Number", "displayName": "Bureau Number", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Revenue ($M)", "displayName": "Revenue ($M)", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Industry", "displayName": "Industry", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "SIC Code", "displayName": "SIC Code", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "For-Profit/Non-Profit", "displayName": "For-Profit/Non-Profit", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Prospect", "displayName": "Prospect", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Title", "displayName": "Title", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "LI Profile", "displayName": "LI Profile", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Updated?", "displayName": "Updated?", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "POC Done", "displayName": "POC Done", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1200, 760],
+      "id": "seamless-update-renewal",
+      "name": "Update Renewal (Seamless.AI)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "seamless-check-ok",
+              "leftValue": "={{ $('Seamless.AI Batch Loop').item.json['Bureau Number'] }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1296, 800],
+      "id": "seamless-check-updated",
+      "name": "Check Seamless Updated OK"
+    },
+    {
+      "parameters": { "amount": 5 },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1504, 800],
+      "id": "seamless-cooldown",
+      "name": "Seamless.AI Cooldown",
+      "webhookId": "a7c3e91f-2b84-4d67-9e15-f3a8c6d2b401"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2480, 368],
+      "id": "append-reformatted-rows",
+      "name": "Append Reformatted Rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [480, 160],
+      "id": "step1-placeholder",
+      "name": "Step 1 EE Placeholder (not implemented)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "seamless-found-check",
+              "leftValue": "={{ $json.seamless_found }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1000, 800],
+      "id": "seamless-found-check",
+      "name": "Seamless Found?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 861775990,
+          "mode": "list",
+          "cachedResultName": "1. Filtered Accounts & POCs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bureau Number": "={{ $('Seamless.AI Batch Loop').item.json['Bureau Number'] }}",
+            "Updated?": "=Seamless.AI: No Match",
+            "POC Done": "=Seamless.AI (no match)"
+          },
+          "matchingColumns": ["Bureau Number"],
+          "schema": [
+            { "id": "Bureau Number", "displayName": "Bureau Number", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "Updated?", "displayName": "Updated?", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false },
+            { "id": "POC Done", "displayName": "POC Done", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1200, 920],
+      "id": "seamless-no-match-update",
+      "name": "Mark No Match",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger1": {
+      "main": [[{ "node": "Has Bureau Number", "type": "main", "index": 0 }]]
+    },
+    "Has Bureau Number": {
+      "main": [
+        [{ "node": "Step 1 EE Placeholder (not implemented)", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Google Sheets Trigger": {
+      "main": [[{ "node": "Filter Not Processing", "type": "main", "index": 0 }]]
+    },
+    "Filter Not Processing": {
+      "main": [[{ "node": "Filter Not Done Revenue", "type": "main", "index": 0 }]]
+    },
+    "Filter Not Done Revenue": {
+      "main": [
+        [
+          { "node": "Renewal1", "type": "main", "index": 0 },
+          { "node": "Fetch Domain Prompts", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Renewal1": {
+      "main": [[{ "node": "Merge Domain + Prompts", "type": "main", "index": 0 }]]
+    },
+    "Fetch Domain Prompts": {
+      "main": [[{ "node": "Merge Domain + Prompts", "type": "main", "index": 1 }]]
+    },
+    "Merge Domain + Prompts": {
+      "main": [[{ "node": "Combine data1", "type": "main", "index": 0 }]]
+    },
+    "Combine data1": {
+      "main": [[{ "node": "Filter Unprocessed Domain", "type": "main", "index": 0 }]]
+    },
+    "Filter Unprocessed Domain": {
+      "main": [[{ "node": "Dedupe", "type": "main", "index": 0 }], []]
+    },
+    "Dedupe": {
+      "main": [[{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]]
+    },
+    "Domain Batch Loop": {
+      "main": [
+        [{ "node": "Reformat to 5 Rows + Blank", "type": "main", "index": 0 }],
+        [{ "node": "Domain Lookup (Perplexity)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Reformat to 5 Rows + Blank": {
+      "main": [[{ "node": "Append Reformatted Rows", "type": "main", "index": 0 }]]
+    },
+    "Append Reformatted Rows": {
+      "main": [[{ "node": "Send Format Rows trigger once", "type": "main", "index": 0 }]]
+    },
+    "Domain Lookup (Perplexity)": {
+      "main": [[{ "node": "Parse Domain Only", "type": "main", "index": 0 }]]
+    },
+    "Parse Domain Only": {
+      "main": [[{ "node": "Update Renewal (Domain Only)", "type": "main", "index": 0 }]]
+    },
+    "Update Renewal (Domain Only)": {
+      "main": [[{ "node": "Wait Domain Cooldown", "type": "main", "index": 0 }]]
+    },
+    "Wait Domain Cooldown": {
+      "main": [[{ "node": "Check Domain Updated OK", "type": "main", "index": 0 }]]
+    },
+    "Check Domain Updated OK": {
+      "main": [
+        [{ "node": "Domain Batch Loop", "type": "main", "index": 0 }],
+        [{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Format Rows trigger once": {
+      "main": [[{ "node": "Format Rows", "type": "main", "index": 0 }]]
+    },
+    "Format Rows": {
+      "main": [[]]
+    },
+
+    "Trigger Seamless.AI Enrichment": {
+      "main": [[{ "node": "Filter Ready for Seamless.AI", "type": "main", "index": 0 }]]
+    },
+    "Filter Ready for Seamless.AI": {
+      "main": [
+        [{ "node": "Seamless.AI Batch Loop", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Seamless.AI Batch Loop": {
+      "main": [
+        [],
+        [{ "node": "Seamless.AI Contact Search", "type": "main", "index": 0 }]
+      ]
+    },
+    "Seamless.AI Contact Search": {
+      "main": [[{ "node": "Parse Seamless.AI Response", "type": "main", "index": 0 }]]
+    },
+    "Parse Seamless.AI Response": {
+      "main": [[{ "node": "Seamless Found?", "type": "main", "index": 0 }]]
+    },
+    "Seamless Found?": {
+      "main": [
+        [{ "node": "Update Renewal (Seamless.AI)", "type": "main", "index": 0 }],
+        [{ "node": "Mark No Match", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Renewal (Seamless.AI)": {
+      "main": [[{ "node": "Check Seamless Updated OK", "type": "main", "index": 0 }]]
+    },
+    "Mark No Match": {
+      "main": [[{ "node": "Check Seamless Updated OK", "type": "main", "index": 0 }]]
+    },
+    "Check Seamless Updated OK": {
+      "main": [
+        [{ "node": "Seamless.AI Cooldown", "type": "main", "index": 0 }],
+        [{ "node": "Seamless.AI Cooldown", "type": "main", "index": 0 }]
+      ]
+    },
+    "Seamless.AI Cooldown": {
+      "main": [[{ "node": "Seamless.AI Batch Loop", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "seamless-ai-reference-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "ef3884035190f04f6d774f0cbf3faf455fb95d0d8be8da8aef3e801074c4f309"
+  },
+  "id": "SeamlessAIReference",
+  "tags": [
+    { "name": "reference" },
+    { "name": "seamless-ai" }
+  ]
+}

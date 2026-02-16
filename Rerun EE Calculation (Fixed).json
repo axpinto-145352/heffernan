@@ -1,0 +1,993 @@
+{
+  "name": "Rerun EE Calculation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cc033ab0-43f1-482b-b956-77bb5dae7bdb",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Runs once per item in n8n\n// Assumes:\n//   - The model's JSON output is in: $json.choices[0].message.content\n//   - The search results array is in: $json.search_results\n\nconst root = { ...$json };\n\n// -----------------------------\n// 1) Get and normalize content\n// -----------------------------\nlet rawContent = root.choices?.[0]?.message?.content ?? '';\n\nif (typeof rawContent !== 'string') {\n  rawContent = String(rawContent ?? '');\n}\n\nlet contentStr = rawContent.trim();\n\n// If it's wrapped in ```json ... ``` remove the fences\nconst fencedMatch = contentStr.match(/```json\\s*([\\s\\S]*?)```/i);\nif (fencedMatch && fencedMatch[1]) {\n  contentStr = fencedMatch[1].trim();\n}\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(contentStr);\n} catch (e) {\n  parsed = null;\n}\n\n// Default fields\nlet employeeCount = null;\nlet reasoning = '';\nlet sourceUrls = [];\n\n// If we successfully parsed the JSON, extract fields\nif (parsed && typeof parsed === 'object') {\n  if (typeof parsed.employee_count === 'number') {\n    employeeCount = parsed.employee_count;\n  }\n  if (typeof parsed.reasoning === 'string') {\n    reasoning = parsed.reasoning;\n  }\n  if (Array.isArray(parsed.source_urls)) {\n    sourceUrls = parsed.source_urls\n      .filter(u => typeof u === 'string' && u.trim() !== '');\n  }\n}\n\n// -----------------------------\n// 2) Numbered URLs from content\n// -----------------------------\nconst sourceUrlsNumbered = sourceUrls.length\n  ? sourceUrls.map((u, i) => `${i + 1}. ${u}`).join('\\n')\n  : '';\n\n// -----------------------------\n// 3) Numbered URLs from search_results\n// -----------------------------\nlet searchResultsUrls = [];\n\nif (Array.isArray(root.search_results)) {\n  for (const sr of root.search_results) {\n    let url = '';\n\n    if (typeof sr === 'string') {\n      url = sr;\n    } else if (sr && typeof sr === 'object') {\n      // Adjust keys if your search_results structure differs\n      url =\n        sr.url ||\n        sr.link ||\n        sr.source_url ||\n        sr.href ||\n        '';\n    }\n\n    if (url && !searchResultsUrls.includes(url)) {\n      searchResultsUrls.push(url);\n    }\n  }\n}\n\nconst searchResultsNumbered = searchResultsUrls.length\n  ? searchResultsUrls.map((u, i) => `${i + 1}. ${u}`).join('\\n')\n  : '';\n\n// -----------------------------\n// 4) Attach fields to root\n// -----------------------------\nroot.employee_count = employeeCount;\nroot.reasoning = reasoning;\nroot.source_urls = sourceUrls;\nroot.source_urls_numbered = sourceUrlsNumbered;\nroot.search_results_numbered = searchResultsNumbered;\n\nreturn root;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        272
+      ],
+      "id": "c33de765-95f8-4a10-9b64-8e1432f6111b",
+      "name": "Parse EE Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "224c6e8a-8d6d-4c8e-ae36-1cd267d71177",
+              "leftValue": "={{ $('Has Empty EE').item.json['Bureau Number'] }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "aa3ce0a5-1c09-42cf-8b53-5bdc5764ca7e",
+              "leftValue": "={{ $('Has Empty EE').item.json['EE\\'s'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        272
+      ],
+      "id": "e5d80e31-a05a-4d50-bd76-e9fae2834b0e",
+      "name": "Has Bureau No Empty EE"
+    },
+    {
+      "parameters": {
+        "model": "sonar-pro",
+        "messages": {
+          "message": [
+            {
+              "content": "={{ $('Fetch EE Prompts').item.json['System Message'] }}",
+              "role": "system"
+            },
+            {
+              "content": "=Company Name: {{ $('NEW HIRE Sheet').item.json['Primary Name'] }}\nCompany Website: {{ $('NEW HIRE Sheet').item.json.CopyPasteURL }}\n\nAddress Details:\nStreet: {{ $('NEW HIRE Sheet').item.json['Street Address'] }}\nCity: {{ $('NEW HIRE Sheet').item.json.City }}\nState: {{ $('NEW HIRE Sheet').item.json.State }}\nZip Code: {{ $('NEW HIRE Sheet').item.json['Zip Code'] }}\nCounty: {{ $('NEW HIRE Sheet').item.json.County }}\nGoverning Class: {{ $('NEW HIRE Sheet').item.json['Governing Class'] }}\nAdditional Description: {{ $('NEW HIRE Sheet').item.json.Description }}\n\n{{ $('Fetch EE Prompts').item.json['User Message'] }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        272
+      ],
+      "id": "5952bfa2-e28a-485c-ab7e-9d1c1b75f364",
+      "name": "Find EE",
+      "credentials": {
+        "perplexityApi": {
+          "id": "ZvICVqGzHHK8ddU0",
+          "name": "Perplexity account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 95311764,
+          "mode": "list",
+          "cachedResultName": "Sources",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit#gid=95311764"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bureau Number": "={{ $('NEW HIRE Sheet').item.json['Bureau Number'] }}",
+            "Primary Name": "={{ $('NEW HIRE Sheet').item.json['Primary Name'] }}",
+            "Sources (EE)": "={{ $('Parse EE Data').item.json.search_results_numbered }}"
+          },
+          "matchingColumns": [
+            "Bureau Number"
+          ],
+          "schema": [
+            {
+              "id": "Bureau Number",
+              "displayName": "Bureau Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Primary Name",
+              "displayName": "Primary Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sources (EE)",
+              "displayName": "Sources (EE)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sources (Revenue)",
+              "displayName": "Sources (Revenue)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sources (POCs)",
+              "displayName": "Sources (POCs)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1632,
+        272
+      ],
+      "id": "c9d3d420-9876-4384-b0fd-0be38fec28a8",
+      "name": "Update Sources",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Step 2: Process New WC prospects for Employee Count per GS Button",
+        "height": 336,
+        "width": 2064,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -80,
+        176
+      ],
+      "typeVersion": 1,
+      "id": "bfa04bcd-9ba7-47a6-96d7-50b8b1e80da1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "0. NEW HERE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bureau Number": "={{ $('NEW HIRE Sheet').item.json['Bureau Number'] }}",
+            "EE Reasoning": "={{ $json.reasoning }}",
+            "EE's": "={{ $json.employee_count }}"
+          },
+          "matchingColumns": [
+            "Bureau Number"
+          ],
+          "schema": [
+            {
+              "id": "RateG",
+              "displayName": "RateG",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "RateS1",
+              "displayName": "RateS1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "RateS2",
+              "displayName": "RateS2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Blended Rate",
+              "displayName": "Blended Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "EE's",
+              "displayName": "EE's",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "EE Reasoning",
+              "displayName": "EE Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "WC Premium (est)",
+              "displayName": "WC Premium (est)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Company in Huddle?",
+              "displayName": "Company in Huddle?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "If Yes, Has a P&C producer had meeting in last 12 mo?",
+              "displayName": "If Yes, Has a P&C producer had meeting in last 12 mo?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "In EPIC as a Client?",
+              "displayName": "In EPIC as a Client?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Heff CRM Check Okay?",
+              "displayName": "Heff CRM Check Okay?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Manual Override to Add? (Trigger)",
+              "displayName": "Manual Override to Add? (Trigger)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Final Okay to Add? (Trigger)",
+              "displayName": "Final Okay to Add? (Trigger)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Bureau Number",
+              "displayName": "Bureau Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Primary Name",
+              "displayName": "Primary Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Street Address",
+              "displayName": "Street Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Zip Code",
+              "displayName": "Zip Code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "County",
+              "displayName": "County",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Governing Class",
+              "displayName": "Governing Class",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ex Mod Year",
+              "displayName": "Ex Mod Year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ExMod",
+              "displayName": "ExMod",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Updated On",
+              "displayName": "Updated On",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ExMod Change",
+              "displayName": "ExMod Change",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "SubClass1",
+              "displayName": "SubClass1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Desc1",
+              "displayName": "Desc1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "SubClass2",
+              "displayName": "SubClass2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Desc2",
+              "displayName": "Desc2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExModYear1",
+              "displayName": "PriorExModYear1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExMod1",
+              "displayName": "PriorExMod1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExModYear2",
+              "displayName": "PriorExModYear2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExMod2",
+              "displayName": "PriorExMod2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExModYear3",
+              "displayName": "PriorExModYear3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExMod3",
+              "displayName": "PriorExMod3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExModYear4",
+              "displayName": "PriorExModYear4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PriorExMod4",
+              "displayName": "PriorExMod4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "GoogleSearch",
+              "displayName": "GoogleSearch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "CopyPasteURL",
+              "displayName": "CopyPasteURL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Processing",
+              "displayName": "Processing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1456,
+        272
+      ],
+      "id": "0984c26f-0586-4e3a-885f-7befb58b663c",
+      "name": "Update New Hire Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "204703a4-87bb-4b9d-b61e-f008180ce6f4",
+              "leftValue": "={{ $json['EE\\'s'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        288
+      ],
+      "id": "97bc897e-0490-4579-bd1c-1b2404aa7fd3",
+      "name": "Has Empty EE"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "204703a4-87bb-4b9d-b61e-f008180ce6f4",
+              "leftValue": "={{ $json.employee_count }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        288
+      ],
+      "id": "685b6a27-4d9f-407b-b7e1-bc5f2cd0037f",
+      "name": "Check EE Found"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        976,
+        256
+      ],
+      "id": "5eb63182-4c2d-4d84-926b-cb4321cd44ab",
+      "name": "EE Batch Loop"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "0. NEW HERE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        288
+      ],
+      "id": "f1a8acf0-7a3a-4231-82a6-7f4e6fef5486",
+      "name": "NEW HIRE Sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw",
+          "mode": "list",
+          "cachedResultName": "WC Prospects Import & Filtering (via Tech Stack)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1856185975,
+          "mode": "list",
+          "cachedResultName": "Prompts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw/edit#gid=1856185975"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "A1:B2"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        272
+      ],
+      "id": "f31b270c-57ee-4d9a-b7a0-640620b76169",
+      "name": "Fetch EE Prompts",
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5LCmS6wgPcuFMzGP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "47ddd94f-b444-4f7e-9198-b3238767bb0f",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        288
+      ],
+      "id": "cf51f435-b5ab-4998-a400-ae0f937e8514",
+      "name": "Webhook1",
+      "webhookId": "47ddd94f-b444-4f7e-9198-b3238767bb0f"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Find EE": {
+      "main": [
+        [
+          {
+            "node": "Parse EE Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse EE Data": {
+      "main": [
+        [
+          {
+            "node": "Update New Hire Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update New Hire Sheet": {
+      "main": [
+        [
+          {
+            "node": "Update Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Empty EE": {
+      "main": [
+        [
+          {
+            "node": "Fetch EE Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sources": {
+      "main": [
+        [
+          {
+            "node": "Check EE Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Bureau No Empty EE": {
+      "main": [
+        [
+          {
+            "node": "EE Batch Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check EE Found": {
+      "main": [
+        [
+          {
+            "node": "EE Batch Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EE Batch Loop": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Find EE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NEW HIRE Sheet": {
+      "main": [
+        [
+          {
+            "node": "Has Empty EE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch EE Prompts": {
+      "main": [
+        [
+          {
+            "node": "Has Bureau No Empty EE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "NEW HIRE Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "26bd43cb-b79c-4604-8513-7ae6ac575810",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ef3884035190f04f6d774f0cbf3faf455fb95d0d8be8da8aef3e801074c4f309"
+  },
+  "id": "wiEQwKmi5nmGOadn",
+  "tags": []
+}
