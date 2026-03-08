@@ -789,10 +789,12 @@ function detectCompanyBlock_(sheet, headers, triggerRow) {
   const startRow = startIdx + 2;
   const endRow = endIdx + 2;
 
-  // Validate block size
+  // Validate block size — hard error prevents misaligned writes
   const blockSize = endRow - startRow + 1;
   if (blockSize !== CONFIG.ROWS_PER_COMPANY) {
-    Logger.log(`Warning: Block for row ${triggerRow} has ${blockSize} rows (expected ${CONFIG.ROWS_PER_COMPANY})`);
+    const msg = `Block for row ${triggerRow} has ${blockSize} rows (expected ${CONFIG.ROWS_PER_COMPANY}). Aborting to prevent misaligned data.`;
+    logToAudit_(sheet.getParent(), 'SYSTEM', 'detectCompanyBlock_', sheet.getName(), `Row ${triggerRow}`, 'BLOCK_SIZE_ERROR', msg);
+    throw new Error(msg);
   }
 
   // Read company details from the first row of the block (single batch read)
@@ -975,21 +977,30 @@ function reformatARenewalRows_(ss) {
     reformatted.push(new Array(numCols).fill(''));
   }
 
-  // Clear existing data and write reformatted
-  if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, numCols).clearContent();
-  }
+  // Set reformatting flag to signal external readers (n8n) that data is in flux
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('reformatting_in_progress', 'true');
 
-  if (reformatted.length > 0) {
-    sheet.getRange(2, 1, reformatted.length, numCols).setValues(reformatted);
+  try {
+    // Clear existing data and write reformatted
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, numCols).clearContent();
+    }
 
-    // Reset formatting: white background, black text, Arial 10pt
-    const dataRange = sheet.getRange(2, 1, reformatted.length, numCols);
-    dataRange.setBackground('#FFFFFF');
-    dataRange.setFontColor('#000000');
-    dataRange.setFontFamily('Arial');
-    dataRange.setFontSize(10);
-    dataRange.setFontWeight('normal');
+    if (reformatted.length > 0) {
+      sheet.getRange(2, 1, reformatted.length, numCols).setValues(reformatted);
+
+      // Reset formatting: white background, black text, Arial 10pt
+      const dataRange = sheet.getRange(2, 1, reformatted.length, numCols);
+      dataRange.setBackground('#FFFFFF');
+      dataRange.setFontColor('#000000');
+      dataRange.setFontFamily('Arial');
+      dataRange.setFontSize(10);
+      dataRange.setFontWeight('normal');
+    }
+  } finally {
+    // Always clear reformatting flag, even on error
+    props.setProperty('reformatting_in_progress', 'false');
   }
 }
 
@@ -1329,9 +1340,11 @@ function menuDeleteAllRows_() {
   );
   if (result !== ui.Button.YES) return;
 
-  const confirm = ui.alert('FINAL CONFIRMATION', 'Type "DELETE" to confirm.', ui.ButtonSet.OK_CANCEL);
-  // For safety, just proceed after double-confirm
-  if (confirm !== ui.Button.OK) return;
+  const confirm = ui.prompt('FINAL CONFIRMATION', 'Type DELETE to confirm:', ui.ButtonSet.OK_CANCEL);
+  if (confirm.getSelectedButton() !== ui.Button.OK || confirm.getResponseText().trim() !== 'DELETE') {
+    ui.alert('Cancelled. You must type DELETE exactly to proceed.');
+    return;
+  }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetsToClean = [

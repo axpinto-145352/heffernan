@@ -152,6 +152,7 @@ Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect
 3. Set the error notifier workflow ID as `errorWorkflow` in the lead gen workflow
 4. Configure all credential placeholders:
    - `GOOGLE_SHEETS_CREDENTIAL_ID`
+   - `GOOGLE_DOCS_CREDENTIAL_ID`
    - `PERPLEXITY_CREDENTIAL_ID`
    - `APIFY_CREDENTIAL_ID`
    - `APPS_SCRIPT_WEB_APP_URL`

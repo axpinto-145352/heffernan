@@ -135,7 +135,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the Perplexity response for EE count\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract employee count from response\nlet eeCount = null;\nconst patterns = [\n  /(?:approximately|about|around|roughly|estimated)?\\s*(\\d[,\\d]*)\\s*(?:employees|workers|staff)/i,\n  /employee\\s*count[:\\s]*(\\d[,\\d]*)/i,\n  /headcount[:\\s]*(\\d[,\\d]*)/i,\n  /(\\d[,\\d]*)\\s*(?:full-time|FTE)/i,\n];\n\nfor (const pattern of patterns) {\n  const match = response.match(pattern);\n  if (match) {\n    eeCount = parseInt(match[1].replace(/,/g, ''), 10);\n    break;\n  }\n}\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    ee_count: eeCount,\n    ee_response: response.substring(0, 2000),\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
+        "jsCode": "// Parse the Perplexity response for EE count\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract employee count from response\nlet eeCount = null;\nconst patterns = [\n  /(?:approximately|about|around|roughly|estimated)?\\s*(\\d[,\\d]*)\\s*(?:employees|workers|staff)/i,\n  /employee\\s*count[:\\s]*(\\d[,\\d]*)/i,\n  /headcount[:\\s]*(\\d[,\\d]*)/i,\n  /(\\d[,\\d]*)\\s*(?:full-time|FTE)/i,\n];\n\nfor (const pattern of patterns) {\n  const match = response.match(pattern);\n  if (match) {\n    eeCount = parseInt(match[1].replace(/,/g, ''), 10);\n    break;\n  }\n}\n\n// Flag for human review if parsing failed\nconst reviewNeeded = eeCount === null ? 'REVIEW NEEDED - AI parse failed' : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    ee_count: eeCount,\n    review_flag: reviewNeeded,\n    ee_response: response.substring(0, 2000),\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "position": [1300, 100],
@@ -152,7 +152,8 @@
           "mappingMode": "defineBelow",
           "value": {
             "EE's": "={{ $json.ee_count }}",
-            "Sources": "={{ $json.sources }}"
+            "Sources": "={{ $json.sources }}",
+            "Notes": "={{ $json.review_flag }}"
           }
         },
         "options": { "cellFormat": "USER_ENTERED" },
@@ -255,7 +256,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse domain and FP/NP classification from Perplexity response\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract domain\nlet domain = '';\nconst domainPatterns = [\n  /(?:website|domain|url)[:\\s]+(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i,\n  /(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i,\n];\nfor (const p of domainPatterns) {\n  const m = response.match(p);\n  if (m) { domain = m[1].toLowerCase(); break; }\n}\n\n// Extract FP/NP\nlet fpnp = '';\nif (/non[- ]?profit|501\\(?c\\)?/i.test(response)) fpnp = 'Non-Profit';\nelse if (/for[- ]?profit|commercial|private company/i.test(response)) fpnp = 'For-Profit';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    domain,\n    fp_np: fpnp,\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
+        "jsCode": "// Parse domain and FP/NP classification from Perplexity response\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract domain — prefer explicitly labeled domain/website matches first\nlet domain = '';\nlet domainConfidence = 'high';\nconst domainPatterns = [\n  /(?:website|domain|official\\s+(?:website|site)|url)[:\\s]+(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i,\n];\nfor (const p of domainPatterns) {\n  const m = response.match(p);\n  if (m) { domain = m[1].toLowerCase(); break; }\n}\n// Greedy fallback — flag as low confidence\nif (!domain) {\n  const fallback = response.match(/(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i);\n  if (fallback) {\n    domain = fallback[1].toLowerCase();\n    domainConfidence = 'low';\n  }\n}\n\n// Extract FP/NP\nlet fpnp = '';\nif (/non[- ]?profit|501\\(?c\\)?/i.test(response)) fpnp = 'Non-Profit';\nelse if (/for[- ]?profit|commercial|private company/i.test(response)) fpnp = 'For-Profit';\n\n// Review flag for missing data\nconst issues = [];\nif (!domain) issues.push('domain not found');\nif (!fpnp) issues.push('FP/NP not determined');\nif (domainConfidence === 'low') issues.push('domain low confidence');\nconst reviewFlag = issues.length > 0 ? 'REVIEW NEEDED - ' + issues.join(', ') : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    domain,\n    fp_np: fpnp,\n    review_flag: reviewFlag,\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "position": [1740, 500],
@@ -273,7 +274,8 @@
           "value": {
             "Domain": "={{ $json.domain }}",
             "For-Profit/Non-Profit": "={{ $json.fp_np }}",
-            "Sources": "={{ $json.sources }}"
+            "Sources": "={{ $json.sources }}",
+            "Notes": "={{ $json.review_flag }}"
           }
         },
         "options": { "cellFormat": "USER_ENTERED" },
@@ -523,7 +525,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse corrected name and build label text\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Clean the corrected name\nlet correctedName = response.trim().replace(/^[\"']|[\"']$/g, '').trim();\nif (!correctedName || correctedName.length > 200) {\n  correctedName = input['Primary Name']; // fallback\n}\n\n// Build address label\nconst prospect = input['Prospect'] || '';\nconst street = input['Street Address'] || '';\nconst city = input['City'] || '';\nconst state = input['State'] || '';\nconst zip = input['Zip Code'] || '';\n\nconst label = `${prospect}\\n${correctedName}\\n${street}\\n${city} ${state} ${zip}`.trim();\n\nreturn [{\n  json: {\n    ...input,\n    corrected_name: correctedName,\n    label_text: label,\n    combined_address: `${street}, ${city}, ${state} ${zip}`.trim(),\n  }\n}];"
+        "jsCode": "// Parse corrected name and build label text\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Clean the corrected name\nlet correctedName = response.trim().replace(/^[\"']|[\"']$/g, '').trim();\nlet usedFallback = false;\nif (!correctedName || correctedName.length > 200) {\n  correctedName = input['Primary Name']; // fallback\n  usedFallback = true;\n}\n\n// Flag for review if fallback was used\nconst reviewFlag = usedFallback ? 'REVIEW NEEDED - corrected name fallback to original' : '';\n\n// Build address label\nconst prospect = input['Prospect'] || '';\nconst street = input['Street Address'] || '';\nconst city = input['City'] || '';\nconst state = input['State'] || '';\nconst zip = input['Zip Code'] || '';\n\nconst label = `${prospect}\\n${correctedName}\\n${street}\\n${city} ${state} ${zip}`.trim();\n\nreturn [{\n  json: {\n    ...input,\n    corrected_name: correctedName,\n    corrected_name_reasoning: reviewFlag,\n    label_text: label,\n    combined_address: `${street}, ${city}, ${state} ${zip}`.trim(),\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "position": [1080, 1300],
@@ -566,6 +568,30 @@
       "typeVersion": 2,
       "id": "step6-prep-doc",
       "name": "Prep Doc Write"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "operation": "update",
+        "documentId": "={{ $json.doc_id }}",
+        "actionsUi": {
+          "actionFields": [{
+            "action": "replaceAllText",
+            "matchCase": false,
+            "replaceText": "={{ $json.label_text }}",
+            "containsText": "={{ '{{Label' + $json.label_number + '}}' }}"
+          }]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "position": [1740, 1300],
+      "typeVersion": 1,
+      "id": "step6-write-doc",
+      "name": "Write Label to Doc",
+      "credentials": { "googleDocsOAuth2Api": { "id": "GOOGLE_DOCS_CREDENTIAL_ID", "name": "Google Docs" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
     }
   ],
   "connections": {
@@ -611,7 +637,8 @@
     "Route FP/NP": { "main": [[{ "node": "Corrected Name (Perplexity)", "type": "main", "index": 0 }]] },
     "Corrected Name (Perplexity)": { "main": [[{ "node": "Parse + Build Label", "type": "main", "index": 0 }]] },
     "Parse + Build Label": { "main": [[{ "node": "Update Label Fields", "type": "main", "index": 0 }]] },
-    "Update Label Fields": { "main": [[{ "node": "Prep Doc Write", "type": "main", "index": 0 }]] }
+    "Update Label Fields": { "main": [[{ "node": "Prep Doc Write", "type": "main", "index": 0 }]] },
+    "Prep Doc Write": { "main": [[{ "node": "Write Label to Doc", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",
