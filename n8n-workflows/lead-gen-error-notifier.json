@@ -1,0 +1,61 @@
+{
+  "name": "Lead Gen Error Notifier (Slack)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Error Notifier Workflow\n# =======================\n# Receives error events from the Lead Gen System workflow.\n# Sends formatted alerts to Slack with execution details and error context.\n#\n# SETUP:\n# 1. Set this workflow's ID as the errorWorkflow in the Lead Gen System\n# 2. Configure Slack webhook URL or Slack API credential\n# 3. Set the target Slack channel",
+        "height": 200,
+        "width": 800,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-200, -100],
+      "typeVersion": 1,
+      "id": "readme",
+      "name": "README"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "position": [200, 100],
+      "typeVersion": 1,
+      "id": "error-trigger",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the error for Slack notification\nconst execution = $input.first().json.execution || {};\nconst workflow = $input.first().json.workflow || {};\n\nconst errorMessage = execution.error?.message || 'Unknown error';\nconst errorNode = execution.error?.node?.name || 'Unknown node';\nconst workflowName = workflow.name || 'Unknown workflow';\nconst executionId = execution.id || 'N/A';\nconst baseUrl = process.env.N8N_BASE_URL || 'https://timbheffins.app.n8n.cloud';\n\n// Build Slack message\nconst slackMessage = {\n  blocks: [\n    {\n      type: 'header',\n      text: { type: 'plain_text', text: ':rotating_light: Workflow Error Alert', emoji: true }\n    },\n    {\n      type: 'section',\n      fields: [\n        { type: 'mrkdwn', text: `*Workflow:*\\n${workflowName}` },\n        { type: 'mrkdwn', text: `*Failed Node:*\\n${errorNode}` },\n      ]\n    },\n    {\n      type: 'section',\n      text: { type: 'mrkdwn', text: `*Error:*\\n\\`\\`\\`${errorMessage.substring(0, 500)}\\`\\`\\`` }\n    },\n    {\n      type: 'section',\n      fields: [\n        { type: 'mrkdwn', text: `*Execution ID:*\\n${executionId}` },\n        { type: 'mrkdwn', text: `*Time:*\\n${new Date().toISOString()}` },\n      ]\n    },\n    {\n      type: 'actions',\n      elements: [{\n        type: 'button',\n        text: { type: 'plain_text', text: 'View Execution' },\n        url: `${baseUrl}/execution/${executionId}`,\n        style: 'danger'\n      }]\n    }\n  ]\n};\n\nreturn [{ json: slackMessage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [420, 100],
+      "typeVersion": 2,
+      "id": "format-error",
+      "name": "Format Slack Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 10000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 100],
+      "typeVersion": 4,
+      "id": "send-slack",
+      "name": "Send to Slack",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Error Trigger": { "main": [[{ "node": "Format Slack Message", "type": "main", "index": 0 }]] },
+    "Format Slack Message": { "main": [[{ "node": "Send to Slack", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
