@@ -135,9 +135,16 @@ Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect
 ### Apps Script
 1. Open the spreadsheet → Extensions → Apps Script
 2. Replace the entire Code.gs with `apps-script/Code.gs`
-3. Deploy as Web App: Execute as "Me", Access "Anyone"
-4. Copy the Web App URL → update `APPS_SCRIPT_WEB_APP_URL` in n8n workflows
-5. Set up a time-driven trigger: `mainScheduledRunner` every 1 minute
+3. Set Script Properties (Project Settings → Script Properties):
+   - `employee_webhook_url` → your n8n Employee webhook URL
+   - `seamless_webhook_url` → your n8n Seamless AI webhook URL
+   - `dopost_api_token` → generate a random token (e.g., `openssl rand -hex 32`)
+   - `address_labels_doc_general` → Google Doc ID for general labels
+   - `address_labels_doc_nonprofit` → Google Doc ID for non-profit labels
+4. Deploy as Web App: Execute as "Me", Access "Anyone"
+5. Copy the Web App URL → update `APPS_SCRIPT_WEB_APP_URL` in n8n workflows
+6. Set up a time-driven trigger: `mainScheduledRunner` every 1 minute
+7. In n8n: set environment variable `WEBHOOK_AUTH_TOKEN` to the same `dopost_api_token` value
 
 ### n8n Workflows
 1. Import `lead-gen-system-v2.json` into n8n
@@ -174,6 +181,10 @@ Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect
 | Silent failures | Errors swallowed | v2 logs all errors to Audit Log sheet |
 | Apps Script URL changes | Redeployment | Must update `APPS_SCRIPT_WEB_APP_URL` in n8n |
 | Rate limiting (429) | Too many API calls | Wait nodes between batches + retry on 429 |
+| Unauthorized webhook calls | No auth on endpoints | v2 requires shared secret token on doPost + webhooks |
+| Secrets in source code | Hardcoded URLs/IDs | v2 stores all secrets in ScriptProperties/env vars |
+| Formula injection | Unsanitized inputs | v2 sanitizes all string values before sheet writes |
+| Slow block detection | Cell-by-cell reads | v2 batch-reads columns into memory |
 
 ---
 

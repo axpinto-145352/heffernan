@@ -18,37 +18,59 @@
 
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
 
-const CONFIG = {
-  // Sheet names
-  RENEWAL_SHEET: '1. Filtered Accounts & POCs',
-  NEW_HERE_SHEET: '0. NEW HERE',
-  POCS_SHEET: '2. POCs',
-  AUDIT_LOG_SHEET: 'Audit Log',
-  WCIRB_RATES_SHEET: 'WCIRB Rates',
+/**
+ * Load CONFIG from ScriptProperties (secrets never in source code).
+ * Set these once via: Script Editor → Project Settings → Script Properties
+ *   - employee_webhook_url
+ *   - seamless_webhook_url
+ *   - address_labels_doc_general
+ *   - address_labels_doc_nonprofit
+ *   - dopost_api_token  (shared secret for authenticating n8n → Apps Script calls)
+ */
+function getConfig_() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    // Sheet names (safe to hardcode — not secrets)
+    RENEWAL_SHEET: '1. Filtered Accounts & POCs',
+    NEW_HERE_SHEET: '0. NEW HERE',
+    POCS_SHEET: '2. POCs',
+    AUDIT_LOG_SHEET: 'Audit Log',
+    WCIRB_RATES_SHEET: 'WCIRB Rates',
 
-  // Webhook URLs (n8n Cloud)
-  EMPLOYEE_WEBHOOK_URL: 'https://timbheffins.app.n8n.cloud/webhook/47ddd94f-cc83-4744-bbb6-6ee13281bf3e',
-  SEAMLESS_WEBHOOK_URL: 'https://timbheffins.app.n8n.cloud/webhook/a3575277-4e2f-4845-9296-a235360e3b81',
+    // Secrets from ScriptProperties (never hardcoded)
+    EMPLOYEE_WEBHOOK_URL: props.getProperty('employee_webhook_url') || '',
+    SEAMLESS_WEBHOOK_URL: props.getProperty('seamless_webhook_url') || '',
+    DOPOST_API_TOKEN: props.getProperty('dopost_api_token') || '',
 
-  // Address Label Google Doc IDs
-  ADDRESS_LABELS_DOC_IDS: {
-    GENERAL: '1Abb062Y9FfvGm0Bq0c_j0V5PZ0w0s7cDwAqG0GVN8cI',
-    NON_PROFIT: '1nbCmloKZ0p0z0w0s7cDwAqG0GVN8cI'
-  },
+    // Address Label Google Doc IDs from ScriptProperties
+    ADDRESS_LABELS_DOC_IDS: {
+      GENERAL: props.getProperty('address_labels_doc_general') || '',
+      NON_PROFIT: props.getProperty('address_labels_doc_nonprofit') || '',
+    },
 
-  // Runner guard
-  RUNNER_MIN_GAP_SEC: 45,
+    // Runner guard
+    RUNNER_MIN_GAP_SEC: 45,
 
-  // Audit log cap
-  AUDIT_LOG_MAX_ROWS: 10000,
+    // Audit log cap
+    AUDIT_LOG_MAX_ROWS: 10000,
 
-  // Webhook retry
-  WEBHOOK_MAX_RETRIES: 3,
-  WEBHOOK_BASE_DELAY_MS: 2000,
+    // Webhook retry
+    WEBHOOK_MAX_RETRIES: 3,
+    WEBHOOK_BASE_DELAY_MS: 2000,
 
-  // Rows per company block
-  ROWS_PER_COMPANY: 5,
-};
+    // Rows per company block
+    ROWS_PER_COMPANY: 5,
+  };
+}
+
+// Lazy-loaded CONFIG singleton (avoids repeated property reads)
+let _configCache = null;
+const CONFIG = new Proxy({}, {
+  get(target, prop) {
+    if (!_configCache) _configCache = getConfig_();
+    return _configCache[prop];
+  }
+});
 
 // ─── HEADER COLUMN LOOKUP (never hardcode column letters) ───────────────────
 
@@ -93,9 +115,24 @@ function getCellByHeader(sheet, row, headerName) {
 
 /**
  * Set cell value by row and header name.
+ * Sanitizes string values to prevent formula injection.
  */
 function setCellByHeader(sheet, row, headerName, value) {
-  sheet.getRange(row, colByHeader(sheet, headerName)).setValue(value);
+  sheet.getRange(row, colByHeader(sheet, headerName)).setValue(sanitizeForSheet_(value));
+}
+
+/**
+ * Sanitize a value before writing to Google Sheets.
+ * Prevents formula injection by prefixing dangerous strings with a single quote.
+ */
+function sanitizeForSheet_(value) {
+  if (typeof value !== 'string') return value;
+  if (value.length === 0) return value;
+  const firstChar = value.charAt(0);
+  if (firstChar === '=' || firstChar === '+' || firstChar === '-' || firstChar === '@') {
+    return "'" + value;
+  }
+  return value;
 }
 
 // ─── LOCK & GAP GUARD ──────────────────────────────────────────────────────
@@ -658,8 +695,9 @@ function checkSeamlessTrigger_(ss) {
       // Detect company block boundaries
       const block = detectCompanyBlock_(sheet, headers, triggerRow);
 
-      // Build webhook payload
+      // Build webhook payload (includes auth token for webhook validation)
       const payload = {
+        token: CONFIG.DOPOST_API_TOKEN, // shared secret for n8n webhook auth
         spreadsheetId: ss.getId(),
         sheetName: CONFIG.RENEWAL_SHEET,
         pocsSheetName: CONFIG.POCS_SHEET,
@@ -709,39 +747,47 @@ function detectCompanyBlock_(sheet, headers, triggerRow) {
   const cityCol = headers['City'];
   const stateCol = headers['State'];
 
-  // Get the company identifier from trigger row
-  const triggerBN = bnCol ? sheet.getRange(triggerRow, bnCol).getValue() : '';
-  const triggerName = nameCol ? sheet.getRange(triggerRow, nameCol).getValue() : '';
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('Sheet has no data rows');
+
+  // Batch-read the Bureau Number and Primary Name columns (all data at once)
+  const numRows = lastRow - 1; // rows 2..lastRow
+  const bnValues = bnCol ? sheet.getRange(2, bnCol, numRows, 1).getValues() : [];
+  const nameValues = nameCol ? sheet.getRange(2, nameCol, numRows, 1).getValues() : [];
+
+  // Convert triggerRow to 0-based index into our arrays
+  const triggerIdx = triggerRow - 2;
+  const triggerBN = bnValues.length > 0 ? String(bnValues[triggerIdx][0]) : '';
+  const triggerName = nameValues.length > 0 ? String(nameValues[triggerIdx][0]) : '';
 
   if (!triggerBN && !triggerName) {
     throw new Error(`Row ${triggerRow} has no Bureau Number or Primary Name`);
   }
 
-  // Walk backward to find block start
-  let startRow = triggerRow;
-  while (startRow > 2) {
-    const prevBN = bnCol ? sheet.getRange(startRow - 1, bnCol).getValue() : '';
-    const prevName = nameCol ? sheet.getRange(startRow - 1, nameCol).getValue() : '';
-
-    // Check if previous row belongs to same company
+  // Walk backward in memory to find block start
+  let startIdx = triggerIdx;
+  while (startIdx > 0) {
+    const prevBN = bnValues.length > 0 ? String(bnValues[startIdx - 1][0]) : '';
+    const prevName = nameValues.length > 0 ? String(nameValues[startIdx - 1][0]) : '';
     const sameCompany = (triggerBN && prevBN === triggerBN) ||
                         (!triggerBN && prevName === triggerName);
     if (!sameCompany) break;
-    startRow--;
+    startIdx--;
   }
 
-  // Walk forward to find block end
-  const lastRow = sheet.getLastRow();
-  let endRow = triggerRow;
-  while (endRow < lastRow) {
-    const nextBN = bnCol ? sheet.getRange(endRow + 1, bnCol).getValue() : '';
-    const nextName = nameCol ? sheet.getRange(endRow + 1, nameCol).getValue() : '';
-
+  // Walk forward in memory to find block end
+  let endIdx = triggerIdx;
+  while (endIdx < numRows - 1) {
+    const nextBN = bnValues.length > 0 ? String(bnValues[endIdx + 1][0]) : '';
+    const nextName = nameValues.length > 0 ? String(nameValues[endIdx + 1][0]) : '';
     const sameCompany = (triggerBN && nextBN === triggerBN) ||
                         (!triggerBN && nextName === triggerName);
     if (!sameCompany) break;
-    endRow++;
+    endIdx++;
   }
+
+  const startRow = startIdx + 2;
+  const endRow = endIdx + 2;
 
   // Validate block size
   const blockSize = endRow - startRow + 1;
@@ -749,15 +795,25 @@ function detectCompanyBlock_(sheet, headers, triggerRow) {
     Logger.log(`Warning: Block for row ${triggerRow} has ${blockSize} rows (expected ${CONFIG.ROWS_PER_COMPANY})`);
   }
 
+  // Read company details from the first row of the block (single batch read)
+  const detailCols = [domainCol, streetCol, cityCol, stateCol].filter(Boolean);
+  const details = {};
+  if (detailCols.length > 0) {
+    // Read the full first row of the block for needed columns
+    for (const col of detailCols) {
+      details[col] = String(sheet.getRange(startRow, col).getValue());
+    }
+  }
+
   return {
     startRow,
     endRow,
-    companyName: String(triggerName),
-    bureauNumber: String(triggerBN),
-    domain: domainCol ? String(sheet.getRange(startRow, domainCol).getValue()) : '',
-    streetAddress: streetCol ? String(sheet.getRange(startRow, streetCol).getValue()) : '',
-    city: cityCol ? String(sheet.getRange(startRow, cityCol).getValue()) : '',
-    state: stateCol ? String(sheet.getRange(startRow, stateCol).getValue()) : '',
+    companyName: triggerName,
+    bureauNumber: triggerBN,
+    domain: details[domainCol] || '',
+    streetAddress: details[streetCol] || '',
+    city: details[cityCol] || '',
+    state: details[stateCol] || '',
   };
 }
 
@@ -1058,6 +1114,16 @@ function onEdit(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
+
+    // Authenticate: require matching API token
+    const token = body.token || '';
+    const expectedToken = CONFIG.DOPOST_API_TOKEN;
+    if (!expectedToken || token !== expectedToken) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ status: 'error', message: 'Unauthorized' })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
     const trigger = body.trigger;
 
     if (!trigger) {
