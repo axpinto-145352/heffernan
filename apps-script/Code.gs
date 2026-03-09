@@ -515,35 +515,44 @@ function fillAddressLabelsFormulas_(ss) {
 
     const prospects = sheet.getRange(2, prospectCol, lastRow - 1, 1).getValues();
 
+    // Batch-read label and label# columns upfront to avoid N+1 reads
+    const labelVals = labelCol ? sheet.getRange(2, labelCol, lastRow - 1, 1).getValues() : [];
+    const labelNumVals = labelNumCol ? sheet.getRange(2, labelNumCol, lastRow - 1, 1).getValues() : [];
+
+    const corrNameCol = headers['Corrected Name'];
+    const addrCol = headers['Combined Address'];
+
+    const labelUpdates = [];
+    const labelNumUpdates = [];
+
     for (let i = 0; i < prospects.length; i++) {
       if (!prospects[i][0]) continue;
 
       const row = i + 2;
 
       // Fill Label formula if empty
-      if (labelCol) {
-        const labelVal = sheet.getRange(row, labelCol).getValue();
-        if (!labelVal) {
-          // Concatenate address fields for label
-          const corrNameCol = headers['Corrected Name'];
-          const addrCol = headers['Combined Address'];
-          if (corrNameCol && addrCol) {
-            sheet.getRange(row, labelCol).setFormula(
-              `=IF(${getColLetter(prospectCol)}${row}<>"", ${getColLetter(prospectCol)}${row}&CHAR(10)&${getColLetter(corrNameCol)}${row}&CHAR(10)&${getColLetter(addrCol)}${row}, "")`
-            );
-          }
-        }
+      if (labelCol && !labelVals[i][0] && corrNameCol && addrCol) {
+        labelUpdates.push({
+          row,
+          formula: `=IF(${getColLetter(prospectCol)}${row}<>"", ${getColLetter(prospectCol)}${row}&CHAR(10)&${getColLetter(corrNameCol)}${row}&CHAR(10)&${getColLetter(addrCol)}${row}, "")`
+        });
       }
 
       // Fill Label # if empty
-      if (labelNumCol) {
-        const numVal = sheet.getRange(row, labelNumCol).getValue();
-        if (!numVal) {
-          sheet.getRange(row, labelNumCol).setFormula(
-            `="{{Label"&ROW()-1&"}}"`
-          );
-        }
+      if (labelNumCol && !labelNumVals[i][0]) {
+        labelNumUpdates.push({
+          row,
+          formula: `="{{Label"&ROW()-1&"}}"`
+        });
       }
+    }
+
+    // Batch write formulas
+    for (const u of labelUpdates) {
+      sheet.getRange(u.row, labelCol).setFormula(u.formula);
+    }
+    for (const u of labelNumUpdates) {
+      sheet.getRange(u.row, labelNumCol).setFormula(u.formula);
     }
   }
 }
@@ -625,8 +634,13 @@ function fillPocNumbers_(ss) {
     }
   }
 
-  for (const u of updates) {
-    sheet.getRange(u.row, pocNumCol).setValue(u.value);
+  // Batch write all POC numbers at once
+  if (updates.length > 0) {
+    const allPocValues = pocNums.map(r => [...r]);
+    for (const u of updates) {
+      allPocValues[u.row - 2][0] = u.value;
+    }
+    sheet.getRange(2, pocNumCol, allPocValues.length, 1).setValues(allPocValues);
   }
 }
 
@@ -651,13 +665,19 @@ function fillPocRowNumbers_(ss) {
   const emails = emailCol ? sheet.getRange(2, emailCol, lastRow - 1, 1).getValues() : [];
   const pocRows = sheet.getRange(2, pocRowCol, lastRow - 1, 1).getValues();
 
+  const updatedPocRows = pocRows.map(r => [...r]);
+  let hasChanges = false;
   for (let i = 0; i < Math.max(prospects.length, emails.length); i++) {
     const hasProspect = prospects[i] && prospects[i][0];
     const hasEmail = emails[i] && emails[i][0];
 
     if ((hasProspect || hasEmail) && !pocRows[i][0]) {
-      sheet.getRange(i + 2, pocRowCol).setValue(i + 2);
+      updatedPocRows[i][0] = i + 2;
+      hasChanges = true;
     }
+  }
+  if (hasChanges) {
+    sheet.getRange(2, pocRowCol, updatedPocRows.length, 1).setValues(updatedPocRows);
   }
 }
 
@@ -730,7 +750,7 @@ function checkSeamlessTrigger_(ss) {
         `Row ${triggerRow}`, 'ERROR', e.message);
 
       // Mark as Error to prevent retry loop, but don't silently swallow
-      setCellByHeader(sheet, triggerRow, 'Ready for Seamless.AI', 'Error - ' + e.message.substring(0, 50));
+      setCellByHeader(sheet, triggerRow, 'Ready for Seamless.AI', 'Error - ' + e.message.substring(0, 100) + ' (see Audit Log)');
     }
   }
 }
@@ -977,6 +997,13 @@ function reformatARenewalRows_(ss) {
     reformatted.push(new Array(numCols).fill(''));
   }
 
+  // Backup current data before destructive rewrite
+  const backupSheetName = '_Backup_Filtered';
+  let backupSheet = ss.getSheetByName(backupSheetName);
+  if (backupSheet) ss.deleteSheet(backupSheet);
+  backupSheet = sheet.copyTo(ss).setName(backupSheetName);
+  backupSheet.hideSheet();
+
   // Set reformatting flag to signal external readers (n8n) that data is in flux
   const props = PropertiesService.getScriptProperties();
   props.setProperty('reformatting_in_progress', 'true');
@@ -1130,6 +1157,11 @@ function doPost(e) {
     const token = body.token || '';
     const expectedToken = CONFIG.DOPOST_API_TOKEN;
     if (!expectedToken || token !== expectedToken) {
+      // Log failed auth attempt for security monitoring
+      try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        logToAudit_(ss, 'unknown', 'doPost', '', '', 'AUTH_FAILURE', 'Invalid or missing auth token');
+      } catch (_) { /* best effort */ }
       return ContentService.createTextOutput(
         JSON.stringify({ status: 'error', message: 'Unauthorized' })
       ).setMimeType(ContentService.MimeType.JSON);
@@ -1175,8 +1207,13 @@ function doPost(e) {
     ).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
+    // Log full error internally, return generic message externally
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      logToAudit_(ss, 'system', 'doPost', '', '', 'ERROR', err.message.substring(0, 500));
+    } catch (_) { /* best effort */ }
     return ContentService.createTextOutput(
-      JSON.stringify({ status: 'error', message: err.message })
+      JSON.stringify({ status: 'error', message: 'Internal error — check Audit Log for details' })
     ).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -1202,10 +1239,39 @@ function clearAllDataFormatting_(ss) {
 // ─── CUSTOM MENU ────────────────────────────────────────────────────────────
 
 /**
+ * Validates that all required ScriptProperties are set.
+ * Shows a warning dialog listing any missing values.
+ */
+function validateSetup_() {
+  const props = PropertiesService.getScriptProperties();
+  const required = [
+    { key: 'employee_webhook_url', label: 'Employee Webhook URL' },
+    { key: 'seamless_webhook_url', label: 'Seamless Webhook URL' },
+    { key: 'dopost_api_token', label: 'doPost API Token' },
+    { key: 'address_labels_doc_general', label: 'Address Labels Doc (General)' },
+    { key: 'address_labels_doc_nonprofit', label: 'Address Labels Doc (Non-Profit)' },
+  ];
+
+  const missing = required.filter(r => !props.getProperty(r.key));
+  if (missing.length > 0) {
+    const names = missing.map(m => '  • ' + m.label).join('\n');
+    SpreadsheetApp.getUi().alert(
+      '⚠ Setup Incomplete',
+      'The following Script Properties are not set:\n\n' + names +
+      '\n\nSet them via: Extensions → Apps Script → Project Settings → Script Properties',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
  * Add Automation Tools menu to spreadsheet UI.
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
+
+  // Check for missing configuration on open
+  try { validateSetup_(); } catch (_) { /* non-blocking */ }
 
   ui.createMenu('Automation Tools')
     .addItem('Re-check EE', 'menuRecheckEE_')

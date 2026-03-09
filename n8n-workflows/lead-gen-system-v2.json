@@ -135,7 +135,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the Perplexity response for EE count\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract employee count from response\nlet eeCount = null;\nconst patterns = [\n  /(?:approximately|about|around|roughly|estimated)?\\s*(\\d[,\\d]*)\\s*(?:employees|workers|staff)/i,\n  /employee\\s*count[:\\s]*(\\d[,\\d]*)/i,\n  /headcount[:\\s]*(\\d[,\\d]*)/i,\n  /(\\d[,\\d]*)\\s*(?:full-time|FTE)/i,\n];\n\nfor (const pattern of patterns) {\n  const match = response.match(pattern);\n  if (match) {\n    eeCount = parseInt(match[1].replace(/,/g, ''), 10);\n    break;\n  }\n}\n\n// Flag for human review if parsing failed\nconst reviewNeeded = eeCount === null ? 'REVIEW NEEDED - AI parse failed' : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    ee_count: eeCount,\n    review_flag: reviewNeeded,\n    ee_response: response.substring(0, 2000),\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
+        "jsCode": "// Parse the Perplexity response for EE count\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract employee count from response\nlet eeCount = null;\nconst patterns = [\n  /(?:approximately|about|around|roughly|estimated)?\\s*(\\d[,\\d]*)\\s*(?:employees|workers|staff)/i,\n  /employee\\s*count[:\\s]*(\\d[,\\d]*)/i,\n  /headcount[:\\s]*(\\d[,\\d]*)/i,\n  /(\\d[,\\d]*)\\s*(?:full-time|FTE)/i,\n];\n\nfor (const pattern of patterns) {\n  const match = response.match(pattern);\n  if (match) {\n    eeCount = parseInt(match[1].replace(/,/g, ''), 10);\n    break;\n  }\n}\n\n// Sanity check: flag unreasonable values for human review\nif (eeCount !== null && (eeCount < 1 || eeCount > 500000)) {\n  eeCount = null;\n}\n\n// Flag for human review if parsing failed or value out of range\nconst reviewNeeded = eeCount === null ? 'REVIEW NEEDED - AI parse failed or value out of range' : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    ee_count: eeCount,\n    review_flag: reviewNeeded,\n    ee_response: response.substring(0, 2000),\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "position": [1300, 100],
@@ -156,7 +156,7 @@
             "Notes": "={{ $json.review_flag }}"
           }
         },
-        "options": { "cellFormat": "USER_ENTERED" },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
@@ -278,7 +278,7 @@
             "Notes": "={{ $json.review_flag }}"
           }
         },
-        "options": { "cellFormat": "USER_ENTERED" },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
@@ -326,7 +326,7 @@
         "columns": {
           "mappingMode": "autoMapInputData"
         },
-        "options": { "cellFormat": "USER_ENTERED" }
+        "options": { "cellFormat": "RAW" }
       },
       "type": "n8n-nodes-base.googleSheets",
       "position": [2840, 500],
@@ -341,7 +341,10 @@
         "url": "APPS_SCRIPT_WEB_APP_URL",
         "sendBody": true,
         "bodyParameters": {
-          "parameters": [{ "name": "trigger", "value": "reformat_a_renewal_rows" }]
+          "parameters": [
+            { "name": "trigger", "value": "reformat_a_renewal_rows" },
+            { "name": "token", "value": "={{ $env.WEBHOOK_AUTH_TOKEN }}" }
+          ]
         },
         "options": { "timeout": 30000 }
       },
@@ -450,7 +453,7 @@
             "LI Profile": "={{ $json.li_profile }}"
           }
         },
-        "options": { "cellFormat": "USER_ENTERED" },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
@@ -549,7 +552,7 @@
             "Ready to send to Address Labels Doc? (Trigger)": "Done"
           }
         },
-        "options": { "cellFormat": "USER_ENTERED" },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",

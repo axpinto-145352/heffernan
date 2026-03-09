@@ -43,7 +43,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validate incoming webhook payload from Apps Script\nconst body = $input.first().json.body || $input.first().json;\n\n// Authenticate: verify shared secret token\nconst expectedToken = $env.WEBHOOK_AUTH_TOKEN || '';\nif (expectedToken && body.token !== expectedToken) {\n  throw new Error('Unauthorized: invalid or missing auth token');\n}\n\nconst required = ['spreadsheetId', 'sheetName', 'startRow', 'endRow', 'companyName', 'domain'];\nconst missing = required.filter(f => !body[f] && body[f] !== 0);\n\nif (missing.length > 0) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\n// Sanitize string inputs (prevent formula injection downstream)\nfunction sanitize(val) {\n  if (typeof val !== 'string') return val;\n  if (val.charAt(0) === '=' || val.charAt(0) === '+' || val.charAt(0) === '-' || val.charAt(0) === '@') return \"'\" + val;\n  return val;\n}\n\nreturn [{ json: {\n  spreadsheet_id: body.spreadsheetId,\n  sheet_name: body.sheetName,\n  pocs_sheet_name: body.pocsSheetName || '2. POCs',\n  start_row: parseInt(body.startRow),\n  end_row: parseInt(body.endRow),\n  row_count: parseInt(body.rowCount) || (parseInt(body.endRow) - parseInt(body.startRow) + 1),\n  trigger_row: parseInt(body.triggerRow),\n  company_name: sanitize(body.companyName),\n  bureau_number: sanitize(body.bureauNumber || ''),\n  domain: sanitize(body.domain),\n  street_address: sanitize(body.streetAddress || ''),\n  city: sanitize(body.city || ''),\n  state: sanitize(body.state || ''),\n  timestamp: body.timestamp || new Date().toISOString(),\n}}];"
+        "jsCode": "// Validate incoming webhook payload from Apps Script\nconst body = $input.first().json.body || $input.first().json;\n\n// Authenticate: verify shared secret token (fail-closed — reject if token not configured)\nconst expectedToken = $env.WEBHOOK_AUTH_TOKEN || '';\nif (!expectedToken || body.token !== expectedToken) {\n  throw new Error('Unauthorized: invalid or missing auth token');\n}\n\nconst required = ['spreadsheetId', 'sheetName', 'startRow', 'endRow', 'companyName', 'domain'];\nconst missing = required.filter(f => !body[f] && body[f] !== 0);\n\nif (missing.length > 0) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\n// Validate numeric row fields\nconst startRow = parseInt(body.startRow);\nconst endRow = parseInt(body.endRow);\nconst triggerRow = parseInt(body.triggerRow);\nif (isNaN(startRow) || isNaN(endRow) || isNaN(triggerRow)) {\n  throw new Error('Invalid row numbers: startRow, endRow, and triggerRow must be numeric');\n}\n\n// Sanitize string inputs (prevent formula injection downstream)\nfunction sanitize(val) {\n  if (typeof val !== 'string') return val;\n  if (val.charAt(0) === '=' || val.charAt(0) === '+' || val.charAt(0) === '-' || val.charAt(0) === '@') return \"'\" + val;\n  return val;\n}\n\nreturn [{ json: {\n  spreadsheet_id: body.spreadsheetId,\n  sheet_name: body.sheetName,\n  pocs_sheet_name: body.pocsSheetName || '2. POCs',\n  start_row: startRow,\n  end_row: endRow,\n  row_count: parseInt(body.rowCount) || (endRow - startRow + 1),\n  trigger_row: triggerRow,\n  company_name: sanitize(body.companyName),\n  bureau_number: sanitize(body.bureauNumber || ''),\n  domain: sanitize(body.domain),\n  street_address: sanitize(body.streetAddress || ''),\n  city: sanitize(body.city || ''),\n  state: sanitize(body.state || ''),\n  timestamp: body.timestamp || new Date().toISOString(),\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "position": [420, 200],
@@ -120,7 +120,7 @@
         "columns": {
           "mappingMode": "autoMapInputData"
         },
-        "options": { "cellFormat": "USER_ENTERED" },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
@@ -154,7 +154,7 @@
         "sheetName": { "__rl": true, "mode": "name", "value": "2. POCs" },
         "operation": "append",
         "columns": { "mappingMode": "autoMapInputData" },
-        "options": { "cellFormat": "USER_ENTERED" }
+        "options": { "cellFormat": "RAW" }
       },
       "type": "n8n-nodes-base.googleSheets",
       "position": [1520, 300],
@@ -174,7 +174,7 @@
             "Ready for Seamless.AI": "No Match"
           }
         },
-        "options": { "cellFormat": "USER_ENTERED" },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.trigger_row }}"
       },
       "type": "n8n-nodes-base.googleSheets",
