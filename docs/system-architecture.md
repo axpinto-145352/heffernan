@@ -189,6 +189,20 @@ Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect
 
 ---
 
+## Dependencies & Versions
+
+| Service | Version / Model | Last Verified | Notes |
+|---------|----------------|---------------|-------|
+| Google Apps Script | V8 runtime | 2026-03-09 | 6-min execution limit per invocation |
+| n8n Cloud | Cloud-hosted (version managed by n8n) | 2026-03-09 | Node typeVersions: googleSheetsTrigger v1, httpRequest v4, code v2 |
+| Perplexity AI | `sonar-pro` | 2026-03-09 | Used in Steps 1, 2, 6. No version suffix — may change without notice |
+| Apify | `apify~linkedin-profile-scraper` | 2026-03-09 | Used in Step 5. Actor may be updated by maintainer |
+| Seamless.AI | v1 API (`/v1/contacts/search`) | 2026-03-09 | Not yet deployed. No published SLA for API stability |
+| Google Sheets API | v4 | 2026-03-09 | 300 req/min quota per project |
+| Google Docs API | v1 | 2026-03-09 | Used for address label writes |
+
+---
+
 ## Rollback Plan
 
 1. Apps Script: Previous version saved in script editor's version history
