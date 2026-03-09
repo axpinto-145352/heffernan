@@ -90,14 +90,20 @@ n8n reformats to 5 rows per company → Apps Script formatting
 
 Receives error events from the lead gen workflows, formats them, and sends Slack alerts with execution links.
 
-### 5. Google Docs — Address Labels
+### 5. Google Docs — Address Labels (`apps-script/AddressLabelsDoc.gs`)
 
 | Doc | ID | Purpose |
 |-----|---|---------|
 | General (For-Profit) | `1Abb062Y...` | Mailing labels for for-profit prospects |
 | Non-Profit | `1nbCmlo...` | Mailing labels for non-profit prospects |
 
-Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect name, corrected company name, and address into these placeholders.
+Labels use `{{Label1}}` through `{{Label402}}` placeholders in a table layout (3 label columns + 2 spacer columns per row). n8n writes prospect name, corrected company name, and address into these placeholders.
+
+Each doc has a container-bound Apps Script (`AddressLabelsDoc.gs`) providing:
+- **Label Tools menu:** "Reset to Template" and "Bold First Line" for manual use
+- **doPost endpoint:** Programmatic access for `reset_to_template` and `bold_first_line` triggers
+- **Authentication:** Shared `dopost_api_token` (same as the Sheets script) via Script Properties
+- **Bold formatting:** First line = Arial Black (prospect name), remaining lines = Comfortaa (address)
 
 ---
 
@@ -141,6 +147,8 @@ Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect
    - `dopost_api_token` → generate a random token (e.g., `openssl rand -hex 32`)
    - `address_labels_doc_general` → Google Doc ID for general labels
    - `address_labels_doc_nonprofit` → Google Doc ID for non-profit labels
+   - `address_labels_doc_url_general` → Web App URL for general labels doc script
+   - `address_labels_doc_url_nonprofit` → Web App URL for non-profit labels doc script
 4. Deploy as Web App: Execute as "Me", Access "Anyone"
 5. Copy the Web App URL → update `APPS_SCRIPT_WEB_APP_URL` in n8n workflows
 6. Set up a time-driven trigger: `mainScheduledRunner` every 1 minute
@@ -157,6 +165,14 @@ Labels use `{{Label1}}` through `{{Label402}}` placeholders. n8n writes prospect
    - `APIFY_CREDENTIAL_ID`
    - `APPS_SCRIPT_WEB_APP_URL`
 5. Activate the workflow
+
+### Address Labels Docs
+1. Open each Google Doc (General and Non-Profit) → Extensions → Apps Script
+2. Replace the script with `apps-script/AddressLabelsDoc.gs`
+3. Set Script Properties:
+   - `dopost_api_token` → same value as the Sheets script's `dopost_api_token`
+4. Deploy as Web App: Execute as "Me", Access "Anyone"
+5. Copy each Web App URL → set as `address_labels_doc_url_general` / `address_labels_doc_url_nonprofit` in the Sheets script's Script Properties
 
 ### Seamless.AI (when ready)
 1. Get Persistent API Key from Heffernan IT (Nadia Messiah)

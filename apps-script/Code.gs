@@ -48,6 +48,12 @@ function getConfig_() {
       NON_PROFIT: props.getProperty('address_labels_doc_nonprofit') || '',
     },
 
+    // Address Label Google Doc Web App URLs (for calling their doPost endpoints)
+    ADDRESS_LABELS_DOC_URLS: {
+      GENERAL: props.getProperty('address_labels_doc_url_general') || '',
+      NON_PROFIT: props.getProperty('address_labels_doc_url_nonprofit') || '',
+    },
+
     // Runner guard
     RUNNER_MIN_GAP_SEC: 45,
 
@@ -1248,8 +1254,10 @@ function validateSetup_() {
     { key: 'employee_webhook_url', label: 'Employee Webhook URL' },
     { key: 'seamless_webhook_url', label: 'Seamless Webhook URL' },
     { key: 'dopost_api_token', label: 'doPost API Token' },
-    { key: 'address_labels_doc_general', label: 'Address Labels Doc (General)' },
-    { key: 'address_labels_doc_nonprofit', label: 'Address Labels Doc (Non-Profit)' },
+    { key: 'address_labels_doc_general', label: 'Address Labels Doc ID (General)' },
+    { key: 'address_labels_doc_nonprofit', label: 'Address Labels Doc ID (Non-Profit)' },
+    { key: 'address_labels_doc_url_general', label: 'Address Labels Doc Web App URL (General)' },
+    { key: 'address_labels_doc_url_nonprofit', label: 'Address Labels Doc Web App URL (Non-Profit)' },
   ];
 
   const missing = required.filter(r => !props.getProperty(r.key));
@@ -1428,17 +1436,26 @@ function menuDeleteAllRows_() {
     }
   }
 
-  // Reset Address Label docs
-  for (const [type, docId] of Object.entries(CONFIG.ADDRESS_LABELS_DOC_IDS)) {
+  // Reset Address Label docs via their own doPost endpoints (table-aware reset)
+  for (const [type, url] of Object.entries(CONFIG.ADDRESS_LABELS_DOC_URLS)) {
+    if (!url) {
+      Logger.log(`No Web App URL configured for ${type} doc — skipping reset`);
+      continue;
+    }
     try {
-      const doc = DocumentApp.openById(docId);
-      const body = doc.getBody();
-      body.clear();
-      // Insert 402 label placeholders
-      for (let i = 1; i <= 402; i++) {
-        body.appendParagraph(`{{Label${i}}}`);
+      const response = UrlFetchApp.fetch(url, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({
+          trigger: 'reset_to_template',
+          token: CONFIG.DOPOST_API_TOKEN,
+        }),
+        muteHttpExceptions: true,
+      });
+      const code = response.getResponseCode();
+      if (code < 200 || code >= 300) {
+        Logger.log(`${type} doc reset failed (HTTP ${code}): ${response.getContentText().substring(0, 200)}`);
       }
-      doc.saveAndClose();
     } catch (e) {
       Logger.log(`Could not reset ${type} doc: ${e.message}`);
     }
