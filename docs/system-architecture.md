@@ -168,20 +168,16 @@ Each doc has a container-bound Apps Script (`AddressLabelsDoc.gs`) providing:
 7. In n8n: set environment variable `WEBHOOK_AUTH_TOKEN` to the same `dopost_api_token` value
 
 ### n8n Workflows
-Workflows are split by step for independent debugging and restart:
+All steps run in a single workflow (n8n Cloud has limited workflow slots).
 
 | File | Purpose |
 |------|---------|
-| `step1-ee-count.json` | NEW HERE → Perplexity EE count → update sheet |
-| `step2-domain-lookup.json` | Filtered → Perplexity domain + FP/NP → reformat → Apps Script |
-| `step5-li-profile.json` | Filtered rowUpdate → Apify LinkedIn scraper → update LI Profile |
-| `step6-address-labels.json` | Filtered rowUpdate → Corrected Name → labels → Google Docs |
-| `lead-gen-system-v2.json` | Legacy monolith (kept for reference) |
+| `lead-gen-system-v2.json` | Steps 1, 2, 5, 6 — all in one workflow |
 | `lead-gen-error-notifier.json` | Error notification workflow |
 
-1. Import each step workflow into n8n
+1. Import `lead-gen-system-v2.json` into n8n
 2. Import `lead-gen-error-notifier.json` into n8n
-3. Set the error notifier workflow ID as `errorWorkflow` in each step workflow
+3. Set the error notifier workflow ID as `errorWorkflow` in the lead gen workflow
 4. Configure all credential placeholders:
    - `GOOGLE_SHEETS_CREDENTIAL_ID`
    - `GOOGLE_DOCS_CREDENTIAL_ID`
