@@ -120,7 +120,7 @@
     {
       "parameters": {
         "model": "sonar-pro",
-        "messages": { "values": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
+        "messages": { "message": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
         "options": { "temperature": 0.1 }
       },
       "type": "n8n-nodes-base.perplexity",
@@ -241,7 +241,7 @@
     {
       "parameters": {
         "model": "sonar-pro",
-        "messages": { "values": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
+        "messages": { "message": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
         "options": { "temperature": 0.1 }
       },
       "type": "n8n-nodes-base.perplexity",
@@ -513,7 +513,7 @@
     {
       "parameters": {
         "model": "sonar-pro",
-        "messages": { "values": [{ "content": "={{ 'Find the correct, official legal name for this organization: ' + $json['Primary Name'] + ', located at ' + $json['Street Address'] + ', ' + $json['City'] + ', ' + $json['State'] + '. Return ONLY the corrected name, nothing else.' }}", "role": "user" }] },
+        "messages": { "message": [{ "content": "={{ 'Find the correct, official legal name for this organization: ' + $json['Primary Name'] + ', located at ' + $json['Street Address'] + ', ' + $json['City'] + ', ' + $json['State'] + '. Return ONLY the corrected name, nothing else.' }}", "role": "user" }] },
         "options": { "temperature": 0.1 }
       },
       "type": "n8n-nodes-base.perplexity",
