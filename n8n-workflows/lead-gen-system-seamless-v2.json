@@ -1,0 +1,229 @@
+{
+  "name": "Lead Gen System v2 (Seamless.AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Lead Gen System v2 — Seamless.AI Version\n# ============================================\n# Full automation: POC discovery via Seamless.AI API replaces manual input.\n# Deploy this workflow AFTER Seamless.AI API credentials are provisioned.\n#\n# FLOW:\n# Step 1: NEW HERE trigger → EE count via Perplexity → update sheet\n# Step 2: Filtered trigger → Domain + FP/NP via Perplexity → reformat 5 rows → Apps Script\n# Step 4: Seamless.AI trigger (polling) → Contact Search → Seniority Sort → Write 5 POC rows\n#         + Revenue/Industry/SIC from first result → Write to POCs sheet\n# Step 5: Filtered rowUpdate → LI Profile via Apify (or Seamless liUrl if available)\n# Step 6: Address Labels rowUpdate → Corrected Name → Generate labels → Write to Google Docs\n#\n# SEAMLESS.AI SPECIFICS:\n# - Single API call per company (all 14 titles)\n# - Two-step: Contact Search → Research/Enrich for emails\n# - Seniority sort: 4 categories (Org Head, Finance, Ops, HR) + 1 extra\n# - Revenue, Industry, SIC extracted from first contact result\n# - Credit consumption: ~2 per company (1 search + 1 research)\n#\n# SETUP:\n# 1. Create HTTP Header Auth credential: Authorization: Bearer YOUR_SEAMLESS_API_KEY\n# 2. Set Google Sheets OAuth credential\n# 3. Set Perplexity API key credential\n# 4. Set Apify API token credential\n# 5. Set errorWorkflow to Error Notifier workflow ID\n# 6. Verify Apps Script Web App URL\n# 7. Replace REPLACE_WITH_SEAMLESS_CREDENTIAL_ID with actual credential ID",
+        "height": 600,
+        "width": 1200,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-400, -200],
+      "typeVersion": 1,
+      "id": "readme-note",
+      "name": "README"
+    },
+    {
+      "parameters": {
+        "content": "## Step 4: Seamless.AI POC Discovery\nTrigger: Apps Script polls 'Ready for Seamless.AI' = Yes → fires webhook\n→ Contact Search (all 14 titles) → Seniority Sort → 5 POC rows\n→ Revenue/Industry/SIC to Filtered sheet → Write POCs sheet",
+        "height": 120,
+        "width": 800,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [0, 0],
+      "typeVersion": 1,
+      "id": "step4-note",
+      "name": "Step 4 Label"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a3575277-4e2f-4845-9296-a235360e3b81",
+        "options": { "rawBody": false },
+        "responseMode": "responseNode"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "position": [200, 200],
+      "typeVersion": 2,
+      "id": "step4-webhook",
+      "name": "Seamless.AI Webhook Trigger",
+      "webhookId": "a3575277-4e2f-4845-9296-a235360e3b81"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate incoming webhook payload from Apps Script\nconst body = $input.first().json.body || $input.first().json;\n\n// Authenticate: verify shared secret token\nconst expectedToken = $env.WEBHOOK_AUTH_TOKEN || '';\nif (expectedToken && body.token !== expectedToken) {\n  throw new Error('Unauthorized: invalid or missing auth token');\n}\n\nconst required = ['spreadsheetId', 'sheetName', 'startRow', 'endRow', 'companyName', 'domain'];\nconst missing = required.filter(f => !body[f] && body[f] !== 0);\n\nif (missing.length > 0) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\n// Sanitize string inputs (prevent formula injection downstream)\nfunction sanitize(val) {\n  if (typeof val !== 'string') return val;\n  if (val.charAt(0) === '=' || val.charAt(0) === '+' || val.charAt(0) === '-' || val.charAt(0) === '@') return \"'\" + val;\n  return val;\n}\n\nreturn [{ json: {\n  spreadsheet_id: body.spreadsheetId,\n  sheet_name: body.sheetName,\n  pocs_sheet_name: body.pocsSheetName || '2. POCs',\n  start_row: parseInt(body.startRow),\n  end_row: parseInt(body.endRow),\n  row_count: parseInt(body.rowCount) || (parseInt(body.endRow) - parseInt(body.startRow) + 1),\n  trigger_row: parseInt(body.triggerRow),\n  company_name: sanitize(body.companyName),\n  bureau_number: sanitize(body.bureauNumber || ''),\n  domain: sanitize(body.domain),\n  street_address: sanitize(body.streetAddress || ''),\n  city: sanitize(body.city || ''),\n  state: sanitize(body.state || ''),\n  timestamp: body.timestamp || new Date().toISOString(),\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [420, 200],
+      "typeVersion": 2,
+      "id": "step4-validate",
+      "name": "Validate Webhook Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.seamless.ai/v1/contacts/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  companyName: [$json.company_name],\n  companyDomain: [$json.domain],\n  title: [\n    'CEO', 'President', 'Owner',\n    'CFO', 'VP Finance', 'Finance Director', 'Head of Finance',\n    'COO', 'VP Operations', 'Director Operations',\n    'Chief People Officer', 'Chief HR Officer',\n    'VP Human Resources', 'Human Resources Director'\n  ],\n  companyNameSearchType: 'default',\n  limit: 20\n}) }}",
+        "options": { "timeout": 30000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 200],
+      "typeVersion": 4,
+      "id": "step4-seamless-search",
+      "name": "Seamless.AI Contact Search",
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_WITH_SEAMLESS_CREDENTIAL_ID", "name": "Seamless AI API Key" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Seamless.AI response and apply seniority sorting\n// Produces exactly 5 POC rows: Org Head, Finance, Ops, HR, Extra\nconst input = $input.first().json;\nconst data = input.data || input.results || [];\nconst companyInfo = $('Validate Webhook Payload').first().json;\n\nif (!data || data.length === 0) {\n  return [{ json: {\n    ...companyInfo,\n    seamless_found: false,\n    poc_rows: [],\n    revenue: '',\n    industry: '',\n    sic_code: '',\n  }}];\n}\n\n// Category definitions with title priority (left = most senior)\nconst categories = {\n  'Org Head': ['CEO', 'President', 'Owner'],\n  'Finance Head': ['CFO', 'VP Finance', 'Finance Director', 'Head of Finance'],\n  'Operations Head': ['COO', 'VP Operations', 'Director Operations'],\n  'HR Head': ['Chief People Officer', 'Chief HR Officer', 'VP Human Resources', 'Human Resources Director'],\n};\n\n// Sort contacts into category buckets\nconst buckets = {\n  'Org Head': [],\n  'Finance Head': [],\n  'Operations Head': [],\n  'HR Head': [],\n  'Unmatched': [],\n};\n\nfor (const contact of data) {\n  const title = (contact.title || '').toLowerCase();\n  let matched = false;\n\n  for (const [cat, titles] of Object.entries(categories)) {\n    for (let i = 0; i < titles.length; i++) {\n      if (title.includes(titles[i].toLowerCase())) {\n        buckets[cat].push({\n          ...contact,\n          _category: cat,\n          _priority: i, // lower = more senior\n        });\n        matched = true;\n        break;\n      }\n    }\n    if (matched) break;\n  }\n\n  if (!matched) {\n    buckets['Unmatched'].push({ ...contact, _category: 'Extra', _priority: 999 });\n  }\n}\n\n// Sort each bucket by priority (most senior first)\nfor (const cat of Object.keys(buckets)) {\n  buckets[cat].sort((a, b) => a._priority - b._priority);\n}\n\n// Select top 1 per category for rows 1-4\nconst selected = [];\nconst usedNames = new Set();\n\nfor (const cat of ['Org Head', 'Finance Head', 'Operations Head', 'HR Head']) {\n  const best = buckets[cat].find(c => !usedNames.has(c.name));\n  if (best) {\n    usedNames.add(best.name);\n    selected.push({ category: cat, contact: best });\n  } else {\n    selected.push({ category: cat, contact: null });\n  }\n}\n\n// Row 5: Best remaining (from any bucket)\nconst allRemaining = [...Object.values(buckets)].flat()\n  .filter(c => !usedNames.has(c.name))\n  .sort((a, b) => a._priority - b._priority);\n\nif (allRemaining.length > 0) {\n  selected.push({ category: 'Extra', contact: allRemaining[0] });\n} else {\n  selected.push({ category: 'Extra', contact: null });\n}\n\n// Build POC rows\nconst pocRows = selected.map((sel, idx) => ({\n  row_num: idx + 1,\n  category: sel.category,\n  prospect: sel.contact?.name || '',\n  title: sel.contact?.title || '',\n  email: sel.contact?.email || '',\n  phone: sel.contact?.phone || '',\n  li_profile: sel.contact?.liUrl || '',\n  department: sel.contact?.department || '',\n  seniority: sel.contact?.seniority || '',\n  reasoning: sel.contact\n    ? `${sel.category} — ${sel.contact.title} (priority ${sel.contact._priority + 1})`\n    : `${sel.category} — No match found`,\n}));\n\n// Extract company enrichment from first result\nconst first = data[0] || {};\n\nreturn [{ json: {\n  ...companyInfo,\n  seamless_found: true,\n  poc_rows: pocRows,\n  revenue: first.companyRevenue || first.revenue || '',\n  industry: (first.industries || []).join(', ') || first.industry || '',\n  sic_code: first.sicCode || '',\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [860, 200],
+      "typeVersion": 2,
+      "id": "step4-seniority-sort",
+      "name": "Seniority Sort + Parse"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.seamless_found }}", "operation": "true" }]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "position": [1080, 200],
+      "typeVersion": 1,
+      "id": "step4-found-check",
+      "name": "Seamless Found?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Write 5 POC rows to the Filtered sheet and POCs sheet\nconst input = $input.first().json;\nconst pocRows = input.poc_rows;\n\n// Build update items for the Filtered sheet (5-row block)\nconst filteredUpdates = [];\nfor (let i = 0; i < pocRows.length; i++) {\n  const row = input.start_row + i;\n  filteredUpdates.push({\n    json: {\n      row_number: row,\n      Prospect: pocRows[i].prospect,\n      Title: pocRows[i].title,\n      'Contact Email': pocRows[i].email,\n      'Contact Phone Number': pocRows[i].phone,\n      'LI Profile': pocRows[i].li_profile,\n      'POC Reasoning': pocRows[i].reasoning,\n      'POC Done': i === pocRows.length - 1 ? 'Done' : '',\n      // Company enrichment on first row only\n      ...(i === 0 ? {\n        'Revenue ($M)': input.revenue,\n        'Industry': input.industry,\n        'SIC Code': input.sic_code,\n      } : {}),\n    }\n  });\n}\n\nreturn filteredUpdates;"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [1300, 100],
+      "typeVersion": 2,
+      "id": "step4-build-updates",
+      "name": "Build POC Updates"
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [1520, 100],
+      "typeVersion": 3,
+      "id": "step4-update-loop",
+      "name": "POC Update Loop"
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
+        "operation": "update",
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": { "cellFormat": "USER_ENTERED" },
+        "dataStartRow": "={{ $json.row_number }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1740, 100],
+      "typeVersion": 4,
+      "id": "step4-update-filtered",
+      "name": "Update Filtered (POC Row)",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": { "amount": 1, "unit": "seconds" },
+      "type": "n8n-nodes-base.wait",
+      "position": [1960, 100],
+      "typeVersion": 1.1,
+      "id": "step4-row-wait",
+      "name": "Row Update Cooldown"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Write all POC results to the POCs sheet\nconst input = $('Seniority Sort + Parse').first().json;\nconst pocRows = input.poc_rows;\n\nreturn pocRows.map(poc => ({\n  json: {\n    'Primary Name': input.company_name.toUpperCase(),\n    'Prospect': poc.prospect,\n    'Title': poc.title,\n    'Contact Email': poc.email,\n    'Contact Phone Number': poc.phone,\n    'POC Reasoning': poc.reasoning,\n    'POC Row #': '',\n    'Contact Last Updated': new Date().toISOString().split('T')[0],\n    'Done': 'Done',\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [1300, 300],
+      "typeVersion": 2,
+      "id": "step4-build-pocs",
+      "name": "Build POCs Sheet Rows"
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "2. POCs" },
+        "operation": "append",
+        "columns": { "mappingMode": "autoMapInputData" },
+        "options": { "cellFormat": "USER_ENTERED" }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1520, 300],
+      "typeVersion": 4,
+      "id": "step4-append-pocs",
+      "name": "Append to POCs Sheet",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
+        "operation": "update",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ready for Seamless.AI": "No Match"
+          }
+        },
+        "options": { "cellFormat": "USER_ENTERED" },
+        "dataStartRow": "={{ $json.trigger_row }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1300, 400],
+      "typeVersion": 4,
+      "id": "step4-mark-no-match",
+      "name": "Mark No Match",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ok', company: $('Validate Webhook Payload').first().json.company_name, seamless_found: $json.seamless_found || false }) }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [2180, 200],
+      "typeVersion": 1,
+      "id": "step4-respond",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Seamless.AI Webhook Trigger": { "main": [[{ "node": "Validate Webhook Payload", "type": "main", "index": 0 }]] },
+    "Validate Webhook Payload": { "main": [[{ "node": "Seamless.AI Contact Search", "type": "main", "index": 0 }]] },
+    "Seamless.AI Contact Search": { "main": [[{ "node": "Seniority Sort + Parse", "type": "main", "index": 0 }]] },
+    "Seniority Sort + Parse": { "main": [[{ "node": "Seamless Found?", "type": "main", "index": 0 }]] },
+    "Seamless Found?": {
+      "main": [
+        [
+          { "node": "Build POC Updates", "type": "main", "index": 0 },
+          { "node": "Build POCs Sheet Rows", "type": "main", "index": 0 }
+        ],
+        [{ "node": "Mark No Match", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build POC Updates": { "main": [[{ "node": "POC Update Loop", "type": "main", "index": 0 }]] },
+    "POC Update Loop": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }],
+        [{ "node": "Update Filtered (POC Row)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Filtered (POC Row)": { "main": [[{ "node": "Row Update Cooldown", "type": "main", "index": 0 }]] },
+    "Row Update Cooldown": { "main": [[{ "node": "POC Update Loop", "type": "main", "index": 0 }]] },
+    "Build POCs Sheet Rows": { "main": [[{ "node": "Append to POCs Sheet", "type": "main", "index": 0 }]] },
+    "Mark No Match": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "ERROR_NOTIFIER_WORKFLOW_ID"
+  }
+}
