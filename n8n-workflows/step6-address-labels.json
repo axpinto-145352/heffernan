@@ -1,0 +1,156 @@
+{
+  "name": "Step 6 — Address Labels",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Step 6: Address Labels\nTrigger: Filtered rowUpdate (Ready to send to Address Labels Doc?)\nRoute FP/NP → Corrected Name (Perplexity) → Parse → Update sheet → Write to Google Docs",
+        "height": 100,
+        "width": 700,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [0, 0],
+      "typeVersion": 1,
+      "id": "step6-note",
+      "name": "Step 6 Label"
+    },
+    {
+      "parameters": {
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
+        "event": "rowUpdated",
+        "includeInOutput": "new"
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "position": [200, 100],
+      "typeVersion": 1,
+      "id": "step6-trigger",
+      "name": "Filtered Update Trigger (Labels)",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{ $json['Ready to send to Address Labels Doc? (Trigger)'] }}", "operation": "equal", "value2": "Yes" }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "position": [420, 100],
+      "typeVersion": 1,
+      "id": "step6-filter",
+      "name": "Ready for Labels?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine For-Profit vs Non-Profit to route to correct doc\nconst row = $input.first().json;\nconst fpnp = (row['For-Profit/Non-Profit'] || '').toLowerCase();\n\nconst isNonProfit = fpnp.includes('non-profit') || fpnp.includes('nonprofit');\n\nreturn [{ json: { ...row, is_non_profit: isNonProfit } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [640, 100],
+      "typeVersion": 2,
+      "id": "step6-route",
+      "name": "Route FP/NP"
+    },
+    {
+      "parameters": {
+        "model": "sonar-pro",
+        "prompt": "={{ 'Find the correct, official legal name for this organization: ' + $json['Primary Name'] + ', located at ' + $json['Street Address'] + ', ' + $json['City'] + ', ' + $json['State'] + '. Return ONLY the corrected name, nothing else.' }}",
+        "options": { "temperature": 0.1 }
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "position": [860, 100],
+      "typeVersion": 1,
+      "id": "step6-correct-name",
+      "name": "Corrected Name (Perplexity)",
+      "credentials": { "perplexityApi": { "id": "PERPLEXITY_CREDENTIAL_ID", "name": "Perplexity" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse corrected name and build label text\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Clean the corrected name\nlet correctedName = response.trim().replace(/^[\"']|[\"']$/g, '').trim();\nlet usedFallback = false;\nif (!correctedName || correctedName.length > 200) {\n  correctedName = input['Primary Name']; // fallback\n  usedFallback = true;\n}\n\n// Flag for review if fallback was used\nconst reviewFlag = usedFallback ? 'REVIEW NEEDED - corrected name fallback to original' : '';\n\n// Build address label\nconst prospect = input['Prospect'] || '';\nconst street = input['Street Address'] || '';\nconst city = input['City'] || '';\nconst state = input['State'] || '';\nconst zip = input['Zip Code'] || '';\n\nconst label = `${prospect}\\n${correctedName}\\n${street}\\n${city} ${state} ${zip}`.trim();\n\nreturn [{\n  json: {\n    ...input,\n    corrected_name: correctedName,\n    corrected_name_reasoning: reviewFlag,\n    label_text: label,\n    combined_address: `${street}, ${city}, ${state} ${zip}`.trim(),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [1080, 100],
+      "typeVersion": 2,
+      "id": "step6-parse-name",
+      "name": "Parse + Build Label"
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
+        "operation": "update",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Corrected Name": "={{ $json.corrected_name }}",
+            "Corrected Name Reasoning": "={{ $json.corrected_name_reasoning || '' }}",
+            "Combined Address": "={{ $json.combined_address }}",
+            "Label": "={{ $json.label_text }}",
+            "Sent to Doc": "Done",
+            "Ready to send to Address Labels Doc? (Trigger)": "Done"
+          }
+        },
+        "options": { "cellFormat": "RAW" },
+        "dataStartRow": "={{ $json.row_number }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1300, 100],
+      "typeVersion": 4,
+      "id": "step6-update-sheet",
+      "name": "Update Label Fields",
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Write label to the appropriate Google Doc\nconst input = $input.first().json;\nconst isNP = input.is_non_profit;\n\nreturn [{\n  json: {\n    ...input,\n    doc_id: isNP ? 'NON_PROFIT_DOC_ID' : 'GENERAL_DOC_ID',\n    label_number: input['Label #'] || '',\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "position": [1520, 100],
+      "typeVersion": 2,
+      "id": "step6-prep-doc",
+      "name": "Prep Doc Write"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "operation": "update",
+        "documentId": "={{ $json.doc_id }}",
+        "actionsUi": {
+          "actionFields": [{
+            "action": "replaceAllText",
+            "matchCase": false,
+            "replaceText": "={{ $json.label_text }}",
+            "containsText": "={{ '{{Label' + $json.label_number + '}}' }}"
+          }]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "position": [1740, 100],
+      "typeVersion": 1,
+      "id": "step6-write-doc",
+      "name": "Write Label to Doc",
+      "credentials": { "googleDocsOAuth2Api": { "id": "GOOGLE_DOCS_CREDENTIAL_ID", "name": "Google Docs" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Filtered Update Trigger (Labels)": { "main": [[{ "node": "Ready for Labels?", "type": "main", "index": 0 }]] },
+    "Ready for Labels?": { "main": [[{ "node": "Route FP/NP", "type": "main", "index": 0 }]] },
+    "Route FP/NP": { "main": [[{ "node": "Corrected Name (Perplexity)", "type": "main", "index": 0 }]] },
+    "Corrected Name (Perplexity)": { "main": [[{ "node": "Parse + Build Label", "type": "main", "index": 0 }]] },
+    "Parse + Build Label": { "main": [[{ "node": "Update Label Fields", "type": "main", "index": 0 }]] },
+    "Update Label Fields": { "main": [[{ "node": "Prep Doc Write", "type": "main", "index": 0 }]] },
+    "Prep Doc Write": { "main": [[{ "node": "Write Label to Doc", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "ERROR_NOTIFIER_WORKFLOW_ID"
+  }
+}

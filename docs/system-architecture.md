@@ -39,16 +39,29 @@ n8n reformats to 5 rows per company → Apps Script formatting
 
 ## Components
 
-### 1. Google Apps Script (`apps-script/Code.gs`)
+### 1. Google Apps Script (`apps-script/`)
 
 **Type:** Container-bound script attached to the spreadsheet
 **Deployed as:** Web App (doPost endpoint) + Timer trigger (mainScheduledRunner)
 
-**What it does:**
-- Scheduled runner (~60s): Formulas, formatting, dropdowns, sorting, trigger polling
-- onEdit handler: Copy-to-Filtered logic, audit logging, auto-uppercase
-- doPost endpoint: n8n calls to trigger reformatting and other operations
-- Seamless AI bridge: Polls "Ready for Seamless.AI" column, fires webhook to n8n
+**File structure:**
+| File | Responsibility |
+|------|---------------|
+| `Config.gs` | All configuration, constants, ScriptProperties access |
+| `Headers.gs` | Header-based column lookup, sanitization, column letter conversion |
+| `Infrastructure.gs` | Lock/gap guard, webhook dispatch with retry, audit logging |
+| `Runner.gs` | Main scheduled runner + all step functions (formulas, formatting, sorting) |
+| `Triggers.gs` | onEdit handler, Seamless AI trigger, copy/reformat operations |
+| `WebApp.gs` | doPost/doGet endpoint, setup validation |
+| `Menu.gs` | Custom menu and menu action handlers |
+| `AddressLabelsDoc.gs` | Separate script for Address Labels Google Docs (see section 5) |
+
+**Error handling conventions:**
+- Infrastructure functions THROW on failure (callers decide)
+- `logToAudit_` never throws (best-effort logging)
+- `onEdit` catches per-handler, logs, never throws
+- `doPost` catches all, returns JSON, logs to audit
+- Menu handlers catch errors, show via `ui.alert()`
 
 **Key safeguards (v2):**
 - All column refs are header-based (no hardcoded letters)
@@ -56,7 +69,7 @@ n8n reformats to 5 rows per company → Apps Script formatting
 - Webhook dispatch with retry + exponential backoff (3 attempts)
 - Block detection validates Bureau Number consistency
 - Idempotent trigger processing (Sent marker prevents re-fire)
-- Errors logged to Audit Log, never silently swallowed
+- All magic numbers centralized in CONFIG
 
 ### 2. n8n Workflow — Manual POC (`n8n-workflows/lead-gen-system-v2.json`)
 
@@ -155,9 +168,20 @@ Each doc has a container-bound Apps Script (`AddressLabelsDoc.gs`) providing:
 7. In n8n: set environment variable `WEBHOOK_AUTH_TOKEN` to the same `dopost_api_token` value
 
 ### n8n Workflows
-1. Import `lead-gen-system-v2.json` into n8n
+Workflows are split by step for independent debugging and restart:
+
+| File | Purpose |
+|------|---------|
+| `step1-ee-count.json` | NEW HERE → Perplexity EE count → update sheet |
+| `step2-domain-lookup.json` | Filtered → Perplexity domain + FP/NP → reformat → Apps Script |
+| `step5-li-profile.json` | Filtered rowUpdate → Apify LinkedIn scraper → update LI Profile |
+| `step6-address-labels.json` | Filtered rowUpdate → Corrected Name → labels → Google Docs |
+| `lead-gen-system-v2.json` | Legacy monolith (kept for reference) |
+| `lead-gen-error-notifier.json` | Error notification workflow |
+
+1. Import each step workflow into n8n
 2. Import `lead-gen-error-notifier.json` into n8n
-3. Set the error notifier workflow ID as `errorWorkflow` in the lead gen workflow
+3. Set the error notifier workflow ID as `errorWorkflow` in each step workflow
 4. Configure all credential placeholders:
    - `GOOGLE_SHEETS_CREDENTIAL_ID`
    - `GOOGLE_DOCS_CREDENTIAL_ID`

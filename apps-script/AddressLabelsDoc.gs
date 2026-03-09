@@ -19,6 +19,14 @@
  *   4. Deploy as Web App: Execute as "Me", Access "Anyone"
  */
 
+// ─── CONSTANTS ──────────────────────────────────────────────────────────────
+
+const LABEL_COLS = [0, 2, 4];      // 0-based column indices for label cells
+const SPACER_COLS = [1, 3];         // 0-based column indices for spacer cells
+const NUM_LABELS = 402;             // Total number of label placeholders
+const NAME_FONT = 'Arial Black';   // Font for prospect name (first line)
+const ADDRESS_FONT = 'Comfortaa';  // Font for address lines
+
 // ─── BOLD FIRST LINE ────────────────────────────────────────────────────────
 
 /**
@@ -52,9 +60,7 @@ function boldLowercaseText() {
   for (let row = 0; row < numRows; row++) {
     const tableRow = existingTable.getRow(row);
     const numCols = tableRow.getNumCells();
-    const labelCols = [0, 2, 4];
-
-    for (let colIdx of labelCols) {
+    for (let colIdx of LABEL_COLS) {
       if (colIdx >= numCols) continue;
 
       try {
@@ -84,11 +90,9 @@ function boldLowercaseText() {
           text.setForegroundColor('#000000');
 
           if (i === 0) {
-            // First line = name = Arial Black
-            text.setFontFamily('Arial Black');
+            text.setFontFamily(NAME_FONT);
           } else {
-            // Other lines = Comfortaa
-            text.setFontFamily('Comfortaa');
+            text.setFontFamily(ADDRESS_FONT);
           }
         }
 
@@ -131,20 +135,17 @@ function resetToTemplate() {
 
   const numRows = existingTable.getNumRows();
   let labelCounter = 1;
-  const numLabels = 402;
 
   for (let row = 0; row < numRows; row++) {
     const tableRow = existingTable.getRow(row);
     const numCols = tableRow.getNumCells();
 
-    const labelCols = [0, 2, 4];
-
-    for (let colIdx of labelCols) {
+    for (let colIdx of LABEL_COLS) {
       if (colIdx < numCols) {
         const cell = tableRow.getCell(colIdx);
         cell.clear();
 
-        if (labelCounter <= numLabels) {
+        if (labelCounter <= NUM_LABELS) {
           const para = cell.appendParagraph('{{Label' + labelCounter + '}}');
           para.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
           labelCounter++;
@@ -152,8 +153,7 @@ function resetToTemplate() {
       }
     }
 
-    const spacerCols = [1, 3];
-    for (let colIdx of spacerCols) {
+    for (let colIdx of SPACER_COLS) {
       if (colIdx < numCols) {
         const cell = tableRow.getCell(colIdx);
         cell.clear();
