@@ -3,180 +3,116 @@
   "nodes": [
     {
       "parameters": {
-        "content": "# Lead Gen System v2 \u2014 Manual POC Version\n# ==========================================\n# Current production workflow. POC discovery is MANUAL (client inputs).\n# Seamless.AI version is a separate workflow for when API credentials are ready.\n#\n# FLOW:\n# Step 1: NEW HERE trigger \u2192 EE count via Perplexity \u2192 update sheet\n# Step 2: Filtered trigger \u2192 Domain + FP/NP via Perplexity \u2192 reformat 5 rows \u2192 Apps Script\n# Step 5: Filtered rowUpdate \u2192 LI Profile via Apify\n# Step 6: Address Labels rowUpdate \u2192 Corrected Name \u2192 Generate labels \u2192 Write to Google Docs\n#\n# MANUAL GAP: After Step 2, client manually finds POCs and enters them.\n# When POCs are entered, Steps 5 and 6 pick up automatically.\n#\n# ERROR HANDLING:\n# - All HTTP nodes have retryOnFail=true (3 attempts, exponential backoff)\n# - errorWorkflow set to Error Notifier workflow\n# - Check nodes loop back on failure so batches never stall\n# - Wait nodes between batches prevent rate limiting\n#\n# SETUP:\n# 1. Set Google Sheets OAuth credential\n# 2. Set Perplexity API key credential\n# 3. Set Apify API token credential\n# 4. Set errorWorkflow to Error Notifier workflow ID\n# 5. Verify Google Apps Script Web App URL is current",
+        "content": "# Lead Gen System v2 — Manual POC Version\n# ==========================================\n# Current production workflow. POC discovery is MANUAL (client inputs).\n# Seamless.AI version is a separate workflow for when API credentials are ready.\n#\n# FLOW:\n# Step 1: NEW HERE trigger → EE count via Perplexity → update sheet\n# Step 2: Filtered trigger → Domain + FP/NP via Perplexity → reformat 5 rows → Apps Script\n# Step 5: Filtered rowUpdate → LI Profile via Apify\n# Step 6: Address Labels rowUpdate → Corrected Name → Generate labels → Write to Google Docs\n#\n# MANUAL GAP: After Step 2, client manually finds POCs and enters them.\n# When POCs are entered, Steps 5 and 6 pick up automatically.\n#\n# ERROR HANDLING:\n# - All HTTP nodes have retryOnFail=true (3 attempts, exponential backoff)\n# - errorWorkflow set to Error Notifier workflow\n# - Check nodes loop back on failure so batches never stall\n# - Wait nodes between batches prevent rate limiting\n#\n# SETUP:\n# 1. Set Google Sheets OAuth credential\n# 2. Set Perplexity API key credential\n# 3. Set Apify API token credential\n# 4. Set errorWorkflow to Error Notifier workflow ID\n# 5. Verify Google Apps Script Web App URL is current",
         "height": 520,
         "width": 1200,
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -400,
-        -200
-      ],
+      "position": [-400, -200],
       "typeVersion": 1,
       "id": "readme-note",
       "name": "README"
     },
     {
       "parameters": {
-        "content": "## Step 1: Process New WC Prospects\nTrigger: NEW HERE rowAdded\nFilter \u2192 Merge with Prompts \u2192 Perplexity EE count \u2192 Parse \u2192 Update sheet",
+        "content": "## Step 1: Process New WC Prospects\nTrigger: NEW HERE rowAdded\nFilter → Merge with Prompts → Perplexity EE count → Parse → Update sheet",
         "height": 100,
         "width": 600,
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "typeVersion": 1,
       "id": "step1-note",
       "name": "Step 1 Label"
     },
     {
       "parameters": {
-        "content": "## Step 2: Domain + FP/NP Lookup\nTrigger: Filtered rowAdded\nDedupe \u2192 Perplexity domain lookup \u2192 Parse \u2192 Update \u2192 Reformat 5 rows \u2192 Apps Script",
+        "content": "## Step 2: Domain + FP/NP Lookup\nTrigger: Filtered rowAdded\nDedupe → Perplexity domain lookup → Parse → Update → Reformat 5 rows → Apps Script",
         "height": 100,
         "width": 700,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        0,
-        400
-      ],
+      "position": [0, 400],
       "typeVersion": 1,
       "id": "step2-note",
       "name": "Step 2 Label"
     },
     {
       "parameters": {
-        "content": "## Step 5: LI Profile Search\nTrigger: Filtered rowUpdate (POC entered manually)\nFilter \u2192 Loop \u2192 Apify LinkedIn scraper \u2192 Update LI Profile column",
+        "content": "## Step 5: LI Profile Search\nTrigger: Filtered rowUpdate (POC entered manually)\nFilter → Loop → Apify LinkedIn scraper → Update LI Profile column",
         "height": 100,
         "width": 600,
         "color": 6
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        0,
-        800
-      ],
+      "position": [0, 800],
       "typeVersion": 1,
       "id": "step5-note",
       "name": "Step 5 Label"
     },
     {
       "parameters": {
-        "content": "## Step 6: Address Labels\nTrigger: Filtered rowUpdate (Address Labels tab)\nMove qualified rows \u2192 Corrected Name (Perplexity) \u2192 Parse \u2192 Generate labels \u2192 Write to Google Docs \u2192 Bold via Apps Script",
+        "content": "## Step 6: Address Labels\nTrigger: Filtered rowUpdate (Address Labels tab)\nMove qualified rows → Corrected Name (Perplexity) → Parse → Generate labels → Write to Google Docs → Bold via Apps Script",
         "height": 100,
         "width": 700,
         "color": 2
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        0,
-        1200
-      ],
+      "position": [0, 1200],
       "typeVersion": 1,
       "id": "step6-note",
       "name": "Step 6 Label"
     },
     {
       "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "0. NEW HERE"
-        },
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "0. NEW HERE" },
         "event": "rowAdded",
         "includeInOutput": "new"
       },
       "type": "n8n-nodes-base.googleSheetsTrigger",
-      "position": [
-        200,
-        100
-      ],
+      "position": [200, 100],
       "typeVersion": 1,
       "id": "step1-trigger",
       "name": "NEW HERE Trigger",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "conditions": {
-          "string": [
-            {
-              "value1": "={{ $json['Bureau Number'] }}",
-              "operation": "isNotEmpty"
-            }
-          ]
+          "string": [{ "value1": "={{ $json['Bureau Number'] }}", "operation": "isNotEmpty" }]
         }
       },
       "type": "n8n-nodes-base.if",
-      "position": [
-        420,
-        100
-      ],
+      "position": [420, 100],
       "typeVersion": 1,
       "id": "step1-has-bn",
       "name": "Has Bureau Number"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Prompts"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Prompts" },
         "operation": "read",
         "range": "A:Z"
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        640,
-        100
-      ],
+      "position": [640, 100],
       "typeVersion": 4,
       "id": "step1-fetch-prompts",
       "name": "Fetch EE Prompts",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "jsCode": "// Combine the row data with the EE prompt template\nconst row = $input.first().json;\nconst prompts = $('Fetch EE Prompts').all();\n\n// Find the EE prompt\nconst eePrompt = prompts.find(p => p.json['Prompt Name'] === 'EE Count');\nif (!eePrompt) throw new Error('EE Count prompt not found in Prompts sheet');\n\n// Substitute company details into the prompt\nlet prompt = eePrompt.json['Prompt Text'];\nprompt = prompt.replace('{{Primary Name}}', row['Primary Name'] || '');\nprompt = prompt.replace('{{Street Address}}', row['Street Address'] || '');\nprompt = prompt.replace('{{City}}', row['City'] || '');\nprompt = prompt.replace('{{State}}', row['State'] || '');\nprompt = prompt.replace('{{Bureau Number}}', row['Bureau Number'] || '');\n\nreturn [{ json: { ...row, prompt, row_number: row['row_number'] } }];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        860,
-        100
-      ],
+      "position": [860, 100],
       "typeVersion": 2,
       "id": "step1-combine",
       "name": "Build EE Prompt"
@@ -184,32 +120,15 @@
     {
       "parameters": {
         "model": "sonar-pro",
-        "options": {
-          "temperature": 0.1
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "={{ $json.prompt }}",
-              "role": "user"
-            }
-          ]
-        }
+        "messages": { "values": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
+        "options": { "temperature": 0.1 }
       },
       "type": "n8n-nodes-base.perplexity",
-      "position": [
-        1080,
-        100
-      ],
+      "position": [1080, 100],
       "typeVersion": 1,
       "id": "step1-perplexity",
       "name": "Perplexity EE Count",
-      "credentials": {
-        "perplexityApi": {
-          "id": "PERPLEXITY_CREDENTIAL_ID",
-          "name": "Perplexity"
-        }
-      },
+      "credentials": { "perplexityApi": { "id": "PERPLEXITY_CREDENTIAL_ID", "name": "Perplexity" } },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
@@ -219,26 +138,15 @@
         "jsCode": "// Parse the Perplexity response for EE count\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract employee count from response\nlet eeCount = null;\nconst patterns = [\n  /(?:approximately|about|around|roughly|estimated)?\\s*(\\d[,\\d]*)\\s*(?:employees|workers|staff)/i,\n  /employee\\s*count[:\\s]*(\\d[,\\d]*)/i,\n  /headcount[:\\s]*(\\d[,\\d]*)/i,\n  /(\\d[,\\d]*)\\s*(?:full-time|FTE)/i,\n];\n\nfor (const pattern of patterns) {\n  const match = response.match(pattern);\n  if (match) {\n    eeCount = parseInt(match[1].replace(/,/g, ''), 10);\n    break;\n  }\n}\n\n// Sanity check: flag unreasonable values for human review\nif (eeCount !== null && (eeCount < 1 || eeCount > 500000)) {\n  eeCount = null;\n}\n\n// Flag for human review if parsing failed or value out of range\nconst reviewNeeded = eeCount === null ? 'REVIEW NEEDED - AI parse failed or value out of range' : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    ee_count: eeCount,\n    review_flag: reviewNeeded,\n    ee_response: response.substring(0, 2000),\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        1300,
-        100
-      ],
+      "position": [1300, 100],
       "typeVersion": 2,
       "id": "step1-parse",
       "name": "Parse EE Response"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "0. NEW HERE"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "0. NEW HERE" },
         "operation": "update",
         "columns": {
           "mappingMode": "defineBelow",
@@ -248,153 +156,84 @@
             "Notes": "={{ $json.review_flag }}"
           }
         },
-        "options": {
-          "cellFormat": "RAW"
-        },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        1520,
-        100
-      ],
+      "position": [1520, 100],
       "typeVersion": 4,
       "id": "step1-update",
       "name": "Update EE's + Sources",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "event": "rowAdded",
         "includeInOutput": "new"
       },
       "type": "n8n-nodes-base.googleSheetsTrigger",
-      "position": [
-        200,
-        500
-      ],
+      "position": [200, 500],
       "typeVersion": 1,
       "id": "step2-trigger",
       "name": "Filtered Trigger",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "conditions": {
           "string": [
-            {
-              "value1": "={{ $json['Domain'] }}",
-              "operation": "isEmpty"
-            },
-            {
-              "value1": "={{ $json['Bureau Number'] }}",
-              "operation": "isNotEmpty"
-            }
+            { "value1": "={{ $json['Domain'] }}", "operation": "isEmpty" },
+            { "value1": "={{ $json['Bureau Number'] }}", "operation": "isNotEmpty" }
           ]
         }
       },
       "type": "n8n-nodes-base.if",
-      "position": [
-        420,
-        500
-      ],
+      "position": [420, 500],
       "typeVersion": 1,
       "id": "step2-filter",
       "name": "Needs Domain Lookup"
     },
     {
       "parameters": {
-        "jsCode": "// Deduplicate by Bureau Number \u2014 only process each company once\nconst items = $input.all();\nconst seen = new Set();\nconst unique = [];\n\nfor (const item of items) {\n  const key = item.json['Bureau Number'] || `${item.json['Primary Name']}|${item.json['Street Address']}`;\n  if (!seen.has(key)) {\n    seen.add(key);\n    unique.push(item);\n  }\n}\n\nreturn unique;"
+        "jsCode": "// Deduplicate by Bureau Number — only process each company once\nconst items = $input.all();\nconst seen = new Set();\nconst unique = [];\n\nfor (const item of items) {\n  const key = item.json['Bureau Number'] || `${item.json['Primary Name']}|${item.json['Street Address']}`;\n  if (!seen.has(key)) {\n    seen.add(key);\n    unique.push(item);\n  }\n}\n\nreturn unique;"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        640,
-        500
-      ],
+      "position": [640, 500],
       "typeVersion": 2,
       "id": "step2-dedupe",
       "name": "Dedupe Companies"
     },
     {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
+      "parameters": { "batchSize": 1, "options": {} },
       "type": "n8n-nodes-base.splitInBatches",
-      "position": [
-        860,
-        500
-      ],
+      "position": [860, 500],
       "typeVersion": 3,
       "id": "step2-batch",
       "name": "Domain Batch Loop"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Prompts"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Prompts" },
         "operation": "read",
         "range": "A:Z"
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        1080,
-        500
-      ],
+      "position": [1080, 500],
       "typeVersion": 4,
       "id": "step2-fetch-prompts",
       "name": "Fetch Domain Prompts",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "jsCode": "// Build domain + FP/NP lookup prompt\nconst row = $input.first().json;\nconst prompts = $('Fetch Domain Prompts').all();\n\nconst domainPrompt = prompts.find(p => p.json['Prompt Name'] === 'Domain + FP/NP');\nif (!domainPrompt) throw new Error('Domain + FP/NP prompt not found in Prompts sheet');\n\nlet prompt = domainPrompt.json['Prompt Text'];\nprompt = prompt.replace('{{Primary Name}}', row['Primary Name'] || '');\nprompt = prompt.replace('{{Street Address}}', row['Street Address'] || '');\nprompt = prompt.replace('{{City}}', row['City'] || '');\nprompt = prompt.replace('{{State}}', row['State'] || '');\n\nreturn [{ json: { ...row, prompt } }];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        1300,
-        500
-      ],
+      "position": [1300, 500],
       "typeVersion": 2,
       "id": "step2-build-prompt",
       "name": "Build Domain Prompt"
@@ -402,61 +241,33 @@
     {
       "parameters": {
         "model": "sonar-pro",
-        "options": {
-          "temperature": 0.1
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "={{ $json.prompt }}",
-              "role": "user"
-            }
-          ]
-        }
+        "messages": { "values": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
+        "options": { "temperature": 0.1 }
       },
       "type": "n8n-nodes-base.perplexity",
-      "position": [
-        1520,
-        500
-      ],
+      "position": [1520, 500],
       "typeVersion": 1,
       "id": "step2-perplexity",
       "name": "Domain Lookup (Perplexity)",
-      "credentials": {
-        "perplexityApi": {
-          "id": "PERPLEXITY_CREDENTIAL_ID",
-          "name": "Perplexity"
-        }
-      },
+      "credentials": { "perplexityApi": { "id": "PERPLEXITY_CREDENTIAL_ID", "name": "Perplexity" } },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
     },
     {
       "parameters": {
-        "jsCode": "// Parse domain and FP/NP classification from Perplexity response\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract domain \u2014 prefer explicitly labeled domain/website matches first\nlet domain = '';\nlet domainConfidence = 'high';\nconst domainPatterns = [\n  /(?:website|domain|official\\s+(?:website|site)|url)[:\\s]+(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i,\n];\nfor (const p of domainPatterns) {\n  const m = response.match(p);\n  if (m) { domain = m[1].toLowerCase(); break; }\n}\n// Greedy fallback \u2014 flag as low confidence\nif (!domain) {\n  const fallback = response.match(/(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i);\n  if (fallback) {\n    domain = fallback[1].toLowerCase();\n    domainConfidence = 'low';\n  }\n}\n\n// Extract FP/NP\nlet fpnp = '';\nif (/non[- ]?profit|501\\(?c\\)?/i.test(response)) fpnp = 'Non-Profit';\nelse if (/for[- ]?profit|commercial|private company/i.test(response)) fpnp = 'For-Profit';\n\n// Review flag for missing data\nconst issues = [];\nif (!domain) issues.push('domain not found');\nif (!fpnp) issues.push('FP/NP not determined');\nif (domainConfidence === 'low') issues.push('domain low confidence');\nconst reviewFlag = issues.length > 0 ? 'REVIEW NEEDED - ' + issues.join(', ') : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    domain,\n    fp_np: fpnp,\n    review_flag: reviewFlag,\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
+        "jsCode": "// Parse domain and FP/NP classification from Perplexity response\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Extract domain — prefer explicitly labeled domain/website matches first\nlet domain = '';\nlet domainConfidence = 'high';\nconst domainPatterns = [\n  /(?:website|domain|official\\s+(?:website|site)|url)[:\\s]+(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i,\n];\nfor (const p of domainPatterns) {\n  const m = response.match(p);\n  if (m) { domain = m[1].toLowerCase(); break; }\n}\n// Greedy fallback — flag as low confidence\nif (!domain) {\n  const fallback = response.match(/(?:https?:\\/\\/)?(?:www\\.)?([a-z0-9][a-z0-9-]*\\.[a-z]{2,})/i);\n  if (fallback) {\n    domain = fallback[1].toLowerCase();\n    domainConfidence = 'low';\n  }\n}\n\n// Extract FP/NP\nlet fpnp = '';\nif (/non[- ]?profit|501\\(?c\\)?/i.test(response)) fpnp = 'Non-Profit';\nelse if (/for[- ]?profit|commercial|private company/i.test(response)) fpnp = 'For-Profit';\n\n// Review flag for missing data\nconst issues = [];\nif (!domain) issues.push('domain not found');\nif (!fpnp) issues.push('FP/NP not determined');\nif (domainConfidence === 'low') issues.push('domain low confidence');\nconst reviewFlag = issues.length > 0 ? 'REVIEW NEEDED - ' + issues.join(', ') : '';\n\n// Extract sources\nconst sources = [];\nconst urlPattern = /\\[([^\\]]+)\\]\\(([^)]+)\\)/g;\nlet urlMatch;\nwhile ((urlMatch = urlPattern.exec(response)) !== null) {\n  sources.push(urlMatch[2]);\n}\n\nreturn [{\n  json: {\n    row_number: input.row_number,\n    domain,\n    fp_np: fpnp,\n    review_flag: reviewFlag,\n    sources: sources.join('\\n'),\n    'Primary Name': input['Primary Name'],\n    'Bureau Number': input['Bureau Number'],\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        1740,
-        500
-      ],
+      "position": [1740, 500],
       "typeVersion": 2,
       "id": "step2-parse",
       "name": "Parse Domain Only"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "operation": "update",
         "columns": {
           "mappingMode": "defineBelow",
@@ -467,57 +278,32 @@
             "Notes": "={{ $json.review_flag }}"
           }
         },
-        "options": {
-          "cellFormat": "RAW"
-        },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        1960,
-        500
-      ],
+      "position": [1960, 500],
       "typeVersion": 4,
       "id": "step2-update",
       "name": "Update Domain + FP/NP",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "conditions": {
-          "number": [
-            {
-              "value1": "={{ $json.statusCode || 200 }}",
-              "operation": "smallerEqual",
-              "value2": 299
-            }
-          ]
+          "number": [{ "value1": "={{ $json.statusCode || 200 }}", "operation": "smallerEqual", "value2": 299 }]
         }
       },
       "type": "n8n-nodes-base.if",
-      "position": [
-        2180,
-        500
-      ],
+      "position": [2180, 500],
       "typeVersion": 1,
       "id": "step2-check",
       "name": "Check Domain Updated"
     },
     {
-      "parameters": {
-        "amount": 3,
-        "unit": "seconds"
-      },
+      "parameters": { "amount": 3, "unit": "seconds" },
       "type": "n8n-nodes-base.wait",
-      "position": [
-        2400,
-        500
-      ],
+      "position": [2400, 500],
       "typeVersion": 1.1,
       "id": "step2-wait",
       "name": "Wait Domain Cooldown"
@@ -527,48 +313,27 @@
         "jsCode": "// After all domain lookups complete, reformat to 5 rows + blank separator per company\nconst items = $input.all();\n\n// Group by company (Bureau Number or Primary Name + Address)\nconst groups = {};\nconst order = [];\n\nfor (const item of items) {\n  const bn = item.json['Bureau Number'] || '';\n  const name = item.json['Primary Name'] || '';\n  const addr = item.json['Street Address'] || '';\n  const key = bn || `${name}|${addr}`;\n  \n  if (!key) continue;\n  \n  if (!groups[key]) {\n    groups[key] = [];\n    order.push(key);\n  }\n  groups[key].push(item.json);\n}\n\n// Build reformatted output: 5 copies of first row per company + blank\nconst output = [];\nfor (const key of order) {\n  const rows = groups[key];\n  const template = rows[0];\n  \n  for (let i = 0; i < 5; i++) {\n    output.push({ json: { ...template, _block_row: i + 1, _is_separator: false } });\n  }\n  // Blank separator\n  output.push({ json: { _is_separator: true } });\n}\n\nreturn output;"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        2620,
-        500
-      ],
+      "position": [2620, 500],
       "typeVersion": 2,
       "id": "step2-reformat",
       "name": "Reformat to 5 Rows + Blank"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "operation": "append",
         "columns": {
           "mappingMode": "autoMapInputData"
         },
-        "options": {
-          "cellFormat": "RAW"
-        }
+        "options": { "cellFormat": "RAW" }
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        2840,
-        500
-      ],
+      "position": [2840, 500],
       "typeVersion": 4,
       "id": "step2-append",
       "name": "Append Reformatted Rows",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
@@ -577,25 +342,14 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            {
-              "name": "trigger",
-              "value": "reformat_a_renewal_rows"
-            },
-            {
-              "name": "token",
-              "value": "={{ $env.WEBHOOK_AUTH_TOKEN }}"
-            }
+            { "name": "trigger", "value": "reformat_a_renewal_rows" },
+            { "name": "token", "value": "={{ $env.WEBHOOK_AUTH_TOKEN }}" }
           ]
         },
-        "options": {
-          "timeout": 30000
-        }
+        "options": { "timeout": 30000 }
       },
       "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        3060,
-        500
-      ],
+      "position": [3060, 500],
       "typeVersion": 4,
       "id": "step2-format-script",
       "name": "Trigger Apps Script Format",
@@ -605,79 +359,39 @@
     },
     {
       "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "event": "rowUpdated",
         "includeInOutput": "new"
       },
       "type": "n8n-nodes-base.googleSheetsTrigger",
-      "position": [
-        200,
-        900
-      ],
+      "position": [200, 900],
       "typeVersion": 1,
       "id": "step5-trigger",
       "name": "Filtered Update Trigger (LI)",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "conditions": {
           "string": [
-            {
-              "value1": "={{ $json['Prospect'] }}",
-              "operation": "isNotEmpty"
-            },
-            {
-              "value1": "={{ $json['LI Profile'] }}",
-              "operation": "isEmpty"
-            },
-            {
-              "value1": "={{ $json['Title'] }}",
-              "operation": "isNotEmpty"
-            }
+            { "value1": "={{ $json['Prospect'] }}", "operation": "isNotEmpty" },
+            { "value1": "={{ $json['LI Profile'] }}", "operation": "isEmpty" },
+            { "value1": "={{ $json['Title'] }}", "operation": "isNotEmpty" }
           ]
         }
       },
       "type": "n8n-nodes-base.if",
-      "position": [
-        420,
-        900
-      ],
+      "position": [420, 900],
       "typeVersion": 1,
       "id": "step5-filter",
       "name": "Needs LI Profile"
     },
     {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
+      "parameters": { "batchSize": 1, "options": {} },
       "type": "n8n-nodes-base.splitInBatches",
-      "position": [
-        640,
-        900
-      ],
+      "position": [640, 900],
       "typeVersion": 3,
       "id": "step5-batch",
       "name": "LI Batch Loop"
@@ -689,32 +403,19 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            {
-              "name": "searchUrl",
-              "value": "={{ 'https://www.google.com/search?q=' + encodeURIComponent($json['Prospect'] + ' ' + ($json['Primary Name'] || '') + ' LinkedIn') }}"
-            }
+            { "name": "searchUrl", "value": "={{ 'https://www.google.com/search?q=' + encodeURIComponent($json['Prospect'] + ' ' + ($json['Primary Name'] || '') + ' LinkedIn') }}" }
           ]
         },
-        "options": {
-          "timeout": 60000
-        },
+        "options": { "timeout": 60000 },
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "apifyApi"
       },
       "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        860,
-        900
-      ],
+      "position": [860, 900],
       "typeVersion": 4,
       "id": "step5-apify",
       "name": "Apify LinkedIn Search",
-      "credentials": {
-        "apifyApi": {
-          "id": "APIFY_CREDENTIAL_ID",
-          "name": "Apify"
-        }
-      },
+      "credentials": { "apifyApi": { "id": "APIFY_CREDENTIAL_ID", "name": "Apify" } },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 10000
@@ -724,10 +425,7 @@
         "jsCode": "// Extract LinkedIn profile URL from Apify response\nconst input = $input.first().json;\nconst results = input.data || input.items || input || [];\n\nlet liUrl = '';\nif (Array.isArray(results)) {\n  for (const r of results) {\n    const url = r.linkedinUrl || r.profileUrl || r.url || '';\n    if (url.includes('linkedin.com/in/')) {\n      liUrl = url;\n      break;\n    }\n  }\n}\n\nreturn [{ json: { ...input, li_profile: liUrl } }];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        1080,
-        900
-      ],
+      "position": [1080, 900],
       "typeVersion": 2,
       "id": "step5-parse",
       "name": "Extract LI URL"
@@ -735,35 +433,19 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
-            {
-              "value1": "={{ $json.li_profile }}",
-              "operation": "isNotEmpty"
-            }
-          ]
+          "string": [{ "value1": "={{ $json.li_profile }}", "operation": "isNotEmpty" }]
         }
       },
       "type": "n8n-nodes-base.if",
-      "position": [
-        1300,
-        900
-      ],
+      "position": [1300, 900],
       "typeVersion": 1,
       "id": "step5-check",
       "name": "Has LI Profile?"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "operation": "update",
         "columns": {
           "mappingMode": "defineBelow",
@@ -771,94 +453,49 @@
             "LI Profile": "={{ $json.li_profile }}"
           }
         },
-        "options": {
-          "cellFormat": "RAW"
-        },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        1520,
-        900
-      ],
+      "position": [1520, 900],
       "typeVersion": 4,
       "id": "step5-update",
       "name": "Update LI Profile",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
-      "parameters": {
-        "amount": 5,
-        "unit": "seconds"
-      },
+      "parameters": { "amount": 5, "unit": "seconds" },
       "type": "n8n-nodes-base.wait",
-      "position": [
-        1740,
-        900
-      ],
+      "position": [1740, 900],
       "typeVersion": 1.1,
       "id": "step5-wait",
       "name": "LI Cooldown"
     },
     {
       "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "event": "rowUpdated",
         "includeInOutput": "new"
       },
       "type": "n8n-nodes-base.googleSheetsTrigger",
-      "position": [
-        200,
-        1300
-      ],
+      "position": [200, 1300],
       "typeVersion": 1,
       "id": "step6-trigger",
       "name": "Filtered Update Trigger (Labels)",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "conditions": {
           "string": [
-            {
-              "value1": "={{ $json['Ready to send to Address Labels Doc? (Trigger)'] }}",
-              "operation": "equal",
-              "value2": "Yes"
-            }
+            { "value1": "={{ $json['Ready to send to Address Labels Doc? (Trigger)'] }}", "operation": "equal", "value2": "Yes" }
           ]
         }
       },
       "type": "n8n-nodes-base.if",
-      "position": [
-        420,
-        1300
-      ],
+      "position": [420, 1300],
       "typeVersion": 1,
       "id": "step6-filter",
       "name": "Ready for Labels?"
@@ -868,10 +505,7 @@
         "jsCode": "// Determine For-Profit vs Non-Profit to route to correct doc\nconst row = $input.first().json;\nconst fpnp = (row['For-Profit/Non-Profit'] || '').toLowerCase();\n\nconst isNonProfit = fpnp.includes('non-profit') || fpnp.includes('nonprofit');\n\nreturn [{ json: { ...row, is_non_profit: isNonProfit } }];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        640,
-        1300
-      ],
+      "position": [640, 1300],
       "typeVersion": 2,
       "id": "step6-route",
       "name": "Route FP/NP"
@@ -879,32 +513,15 @@
     {
       "parameters": {
         "model": "sonar-pro",
-        "options": {
-          "temperature": 0.1
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "={{ 'Find the correct, official legal name for this organization: ' + $json['Primary Name'] + ', located at ' + $json['Street Address'] + ', ' + $json['City'] + ', ' + $json['State'] + '. Return ONLY the corrected name, nothing else.' }}",
-              "role": "user"
-            }
-          ]
-        }
+        "messages": { "values": [{ "content": "={{ 'Find the correct, official legal name for this organization: ' + $json['Primary Name'] + ', located at ' + $json['Street Address'] + ', ' + $json['City'] + ', ' + $json['State'] + '. Return ONLY the corrected name, nothing else.' }}", "role": "user" }] },
+        "options": { "temperature": 0.1 }
       },
       "type": "n8n-nodes-base.perplexity",
-      "position": [
-        860,
-        1300
-      ],
+      "position": [860, 1300],
       "typeVersion": 1,
       "id": "step6-correct-name",
       "name": "Corrected Name (Perplexity)",
-      "credentials": {
-        "perplexityApi": {
-          "id": "PERPLEXITY_CREDENTIAL_ID",
-          "name": "Perplexity"
-        }
-      },
+      "credentials": { "perplexityApi": { "id": "PERPLEXITY_CREDENTIAL_ID", "name": "Perplexity" } },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
@@ -914,26 +531,15 @@
         "jsCode": "// Parse corrected name and build label text\nconst input = $input.first().json;\nconst response = input.choices?.[0]?.message?.content || input.content || '';\n\n// Clean the corrected name\nlet correctedName = response.trim().replace(/^[\"']|[\"']$/g, '').trim();\nlet usedFallback = false;\nif (!correctedName || correctedName.length > 200) {\n  correctedName = input['Primary Name']; // fallback\n  usedFallback = true;\n}\n\n// Flag for review if fallback was used\nconst reviewFlag = usedFallback ? 'REVIEW NEEDED - corrected name fallback to original' : '';\n\n// Build address label\nconst prospect = input['Prospect'] || '';\nconst street = input['Street Address'] || '';\nconst city = input['City'] || '';\nconst state = input['State'] || '';\nconst zip = input['Zip Code'] || '';\n\nconst label = `${prospect}\\n${correctedName}\\n${street}\\n${city} ${state} ${zip}`.trim();\n\nreturn [{\n  json: {\n    ...input,\n    corrected_name: correctedName,\n    corrected_name_reasoning: reviewFlag,\n    label_text: label,\n    combined_address: `${street}, ${city}, ${state} ${zip}`.trim(),\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        1080,
-        1300
-      ],
+      "position": [1080, 1300],
       "typeVersion": 2,
       "id": "step6-parse-name",
       "name": "Parse + Build Label"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "1. Filtered Accounts & POCs"
-        },
+        "documentId": { "__rl": true, "mode": "id", "value": "1mno3Gy9qotBKO36Qx28p8ft5krR3sncZis8lrBVC5Cw" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "1. Filtered Accounts & POCs" },
         "operation": "update",
         "columns": {
           "mappingMode": "defineBelow",
@@ -946,35 +552,22 @@
             "Ready to send to Address Labels Doc? (Trigger)": "Done"
           }
         },
-        "options": {
-          "cellFormat": "RAW"
-        },
+        "options": { "cellFormat": "RAW" },
         "dataStartRow": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
-      "position": [
-        1300,
-        1300
-      ],
+      "position": [1300, 1300],
       "typeVersion": 4,
       "id": "step6-update-sheet",
       "name": "Update Label Fields",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
+      "credentials": { "googleSheetsOAuth2Api": { "id": "GOOGLE_SHEETS_CREDENTIAL_ID", "name": "Google Sheets" } }
     },
     {
       "parameters": {
         "jsCode": "// Write label to the appropriate Google Doc\n// The actual Google Docs write is done via Google Docs API node\nconst input = $input.first().json;\nconst isNP = input.is_non_profit;\n\nreturn [{\n  json: {\n    ...input,\n    doc_id: isNP ? 'NON_PROFIT_DOC_ID' : 'GENERAL_DOC_ID',\n    label_number: input['Label #'] || '',\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
-      "position": [
-        1520,
-        1300
-      ],
+      "position": [1520, 1300],
       "typeVersion": 2,
       "id": "step6-prep-doc",
       "name": "Prep Doc Write"
@@ -985,425 +578,70 @@
         "operation": "update",
         "documentId": "={{ $json.doc_id }}",
         "actionsUi": {
-          "actionFields": [
-            {
-              "action": "replaceAllText",
-              "matchCase": false,
-              "replaceText": "={{ $json.label_text }}",
-              "containsText": "={{ '{{Label' + $json.label_number + '}}' }}"
-            }
-          ]
+          "actionFields": [{
+            "action": "replaceAllText",
+            "matchCase": false,
+            "replaceText": "={{ $json.label_text }}",
+            "containsText": "={{ '{{Label' + $json.label_number + '}}' }}"
+          }]
         }
       },
       "type": "n8n-nodes-base.googleDocs",
-      "position": [
-        1740,
-        1300
-      ],
+      "position": [1740, 1300],
       "typeVersion": 1,
       "id": "step6-write-doc",
       "name": "Write Label to Doc",
-      "credentials": {
-        "googleDocsOAuth2Api": {
-          "id": "GOOGLE_DOCS_CREDENTIAL_ID",
-          "name": "Google Docs"
-        }
-      },
+      "credentials": { "googleDocsOAuth2Api": { "id": "GOOGLE_DOCS_CREDENTIAL_ID", "name": "Google Docs" } },
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 3000
     }
   ],
   "connections": {
-    "NEW HERE Trigger": {
-      "main": [
-        [
-          {
-            "node": "Has Bureau Number",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Bureau Number": {
-      "main": [
-        [
-          {
-            "node": "Fetch EE Prompts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch EE Prompts": {
-      "main": [
-        [
-          {
-            "node": "Build EE Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build EE Prompt": {
-      "main": [
-        [
-          {
-            "node": "Perplexity EE Count",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Perplexity EE Count": {
-      "main": [
-        [
-          {
-            "node": "Parse EE Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse EE Response": {
-      "main": [
-        [
-          {
-            "node": "Update EE's + Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filtered Trigger": {
-      "main": [
-        [
-          {
-            "node": "Needs Domain Lookup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Needs Domain Lookup": {
-      "main": [
-        [
-          {
-            "node": "Dedupe Companies",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dedupe Companies": {
-      "main": [
-        [
-          {
-            "node": "Domain Batch Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
+    "NEW HERE Trigger": { "main": [[{ "node": "Has Bureau Number", "type": "main", "index": 0 }]] },
+    "Has Bureau Number": { "main": [[{ "node": "Fetch EE Prompts", "type": "main", "index": 0 }]] },
+    "Fetch EE Prompts": { "main": [[{ "node": "Build EE Prompt", "type": "main", "index": 0 }]] },
+    "Build EE Prompt": { "main": [[{ "node": "Perplexity EE Count", "type": "main", "index": 0 }]] },
+    "Perplexity EE Count": { "main": [[{ "node": "Parse EE Response", "type": "main", "index": 0 }]] },
+    "Parse EE Response": { "main": [[{ "node": "Update EE's + Sources", "type": "main", "index": 0 }]] },
+    "Filtered Trigger": { "main": [[{ "node": "Needs Domain Lookup", "type": "main", "index": 0 }]] },
+    "Needs Domain Lookup": { "main": [[{ "node": "Dedupe Companies", "type": "main", "index": 0 }]] },
+    "Dedupe Companies": { "main": [[{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]] },
     "Domain Batch Loop": {
       "main": [
-        [
-          {
-            "node": "Reformat to 5 Rows + Blank",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fetch Domain Prompts",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Reformat to 5 Rows + Blank", "type": "main", "index": 0 }],
+        [{ "node": "Fetch Domain Prompts", "type": "main", "index": 0 }]
       ]
     },
-    "Fetch Domain Prompts": {
-      "main": [
-        [
-          {
-            "node": "Build Domain Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Domain Prompt": {
-      "main": [
-        [
-          {
-            "node": "Domain Lookup (Perplexity)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Domain Lookup (Perplexity)": {
-      "main": [
-        [
-          {
-            "node": "Parse Domain Only",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Domain Only": {
-      "main": [
-        [
-          {
-            "node": "Update Domain + FP/NP",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update Domain + FP/NP": {
-      "main": [
-        [
-          {
-            "node": "Check Domain Updated",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
+    "Fetch Domain Prompts": { "main": [[{ "node": "Build Domain Prompt", "type": "main", "index": 0 }]] },
+    "Build Domain Prompt": { "main": [[{ "node": "Domain Lookup (Perplexity)", "type": "main", "index": 0 }]] },
+    "Domain Lookup (Perplexity)": { "main": [[{ "node": "Parse Domain Only", "type": "main", "index": 0 }]] },
+    "Parse Domain Only": { "main": [[{ "node": "Update Domain + FP/NP", "type": "main", "index": 0 }]] },
+    "Update Domain + FP/NP": { "main": [[{ "node": "Check Domain Updated", "type": "main", "index": 0 }]] },
     "Check Domain Updated": {
       "main": [
-        [
-          {
-            "node": "Wait Domain Cooldown",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Domain Batch Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Wait Domain Cooldown", "type": "main", "index": 0 }],
+        [{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]
       ]
     },
-    "Wait Domain Cooldown": {
-      "main": [
-        [
-          {
-            "node": "Domain Batch Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Reformat to 5 Rows + Blank": {
-      "main": [
-        [
-          {
-            "node": "Append Reformatted Rows",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Append Reformatted Rows": {
-      "main": [
-        [
-          {
-            "node": "Trigger Apps Script Format",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filtered Update Trigger (LI)": {
-      "main": [
-        [
-          {
-            "node": "Needs LI Profile",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Needs LI Profile": {
-      "main": [
-        [
-          {
-            "node": "LI Batch Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LI Batch Loop": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Apify LinkedIn Search",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apify LinkedIn Search": {
-      "main": [
-        [
-          {
-            "node": "Extract LI URL",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract LI URL": {
-      "main": [
-        [
-          {
-            "node": "Has LI Profile?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has LI Profile?": {
-      "main": [
-        [
-          {
-            "node": "Update LI Profile",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update LI Profile": {
-      "main": [
-        [
-          {
-            "node": "LI Cooldown",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LI Cooldown": {
-      "main": [
-        [
-          {
-            "node": "LI Batch Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filtered Update Trigger (Labels)": {
-      "main": [
-        [
-          {
-            "node": "Ready for Labels?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ready for Labels?": {
-      "main": [
-        [
-          {
-            "node": "Route FP/NP",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route FP/NP": {
-      "main": [
-        [
-          {
-            "node": "Corrected Name (Perplexity)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Corrected Name (Perplexity)": {
-      "main": [
-        [
-          {
-            "node": "Parse + Build Label",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse + Build Label": {
-      "main": [
-        [
-          {
-            "node": "Update Label Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update Label Fields": {
-      "main": [
-        [
-          {
-            "node": "Prep Doc Write",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prep Doc Write": {
-      "main": [
-        [
-          {
-            "node": "Write Label to Doc",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Wait Domain Cooldown": { "main": [[{ "node": "Domain Batch Loop", "type": "main", "index": 0 }]] },
+    "Reformat to 5 Rows + Blank": { "main": [[{ "node": "Append Reformatted Rows", "type": "main", "index": 0 }]] },
+    "Append Reformatted Rows": { "main": [[{ "node": "Trigger Apps Script Format", "type": "main", "index": 0 }]] },
+    "Filtered Update Trigger (LI)": { "main": [[{ "node": "Needs LI Profile", "type": "main", "index": 0 }]] },
+    "Needs LI Profile": { "main": [[{ "node": "LI Batch Loop", "type": "main", "index": 0 }]] },
+    "LI Batch Loop": { "main": [[], [{ "node": "Apify LinkedIn Search", "type": "main", "index": 0 }]] },
+    "Apify LinkedIn Search": { "main": [[{ "node": "Extract LI URL", "type": "main", "index": 0 }]] },
+    "Extract LI URL": { "main": [[{ "node": "Has LI Profile?", "type": "main", "index": 0 }]] },
+    "Has LI Profile?": { "main": [[{ "node": "Update LI Profile", "type": "main", "index": 0 }]] },
+    "Update LI Profile": { "main": [[{ "node": "LI Cooldown", "type": "main", "index": 0 }]] },
+    "LI Cooldown": { "main": [[{ "node": "LI Batch Loop", "type": "main", "index": 0 }]] },
+    "Filtered Update Trigger (Labels)": { "main": [[{ "node": "Ready for Labels?", "type": "main", "index": 0 }]] },
+    "Ready for Labels?": { "main": [[{ "node": "Route FP/NP", "type": "main", "index": 0 }]] },
+    "Route FP/NP": { "main": [[{ "node": "Corrected Name (Perplexity)", "type": "main", "index": 0 }]] },
+    "Corrected Name (Perplexity)": { "main": [[{ "node": "Parse + Build Label", "type": "main", "index": 0 }]] },
+    "Parse + Build Label": { "main": [[{ "node": "Update Label Fields", "type": "main", "index": 0 }]] },
+    "Update Label Fields": { "main": [[{ "node": "Prep Doc Write", "type": "main", "index": 0 }]] },
+    "Prep Doc Write": { "main": [[{ "node": "Write Label to Doc", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",
