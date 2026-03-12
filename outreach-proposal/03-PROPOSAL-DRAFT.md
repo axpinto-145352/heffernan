@@ -108,12 +108,13 @@ If you want to switch vendors, modify the system, or bring it in-house — you c
 
 | | Original Proposal | Our Approach |
 |-|-------------------|--------------|
-| **Upfront** | $29,000 | 20-30 hours of development |
+| **Upfront build** | $29,000 | $5,000 (flat fee) |
 | **Monthly tools** | Hosting + DB + AI + retainer (~$500-1000/mo) | ~$10-85/mo incremental (Perplexity + Apollo + AI API) |
-| **First year total** | ~$35,000-45,000+ | Dev hours + ~$120-1,020 in tools |
+| **Monthly maintenance** | Included in retainer above | $500/mo (monitoring, updates, security, prompt tuning) |
+| **First year total** | ~$35,000-45,000+ | ~$11,120-12,020 |
 | **Time to launch** | 2-4 months | 1-2 weeks |
 | **Ownership** | Vendor owns research engine | You own everything |
-| **Maintenance** | Vendor dependency | Your team edits prompts & templates directly |
+| **Maintenance** | Vendor dependency | Veteran Vectors — proactive monitoring, API updates, security patches |
 
 ---
 
@@ -149,17 +150,18 @@ Assuming the EA runs **2 batches per week** (conservative for active prospecting
 
 | | Their Custom App | Our Build |
 |-|-----------------|-----------|
-| Year 1 upfront | $29,000 | Dev hours (20-30 hrs) |
+| Year 1 upfront | $29,000 | $5,000 |
 | Year 1 monthly tools | ~$6,000-12,000 | ~$120-1,020 |
-| Year 1 maintenance retainer | ~$3,000-6,000 | $0 (self-serviceable) |
-| **Year 1 total** | **$38,000-47,000** | **Dev hours + $120-1,020** |
+| Year 1 maintenance | ~$3,000-6,000 | $6,000 ($500/mo) |
+| **Year 1 total** | **$38,000-47,000** | **$11,120-12,020** |
 | Year 2 monthly tools | ~$6,000-12,000 | ~$120-1,020 |
-| Year 2 maintenance | ~$3,000-6,000 | $0 |
-| **Year 2 total** | **$9,000-18,000** | **$120-1,020** |
-| **2-year total** | **$47,000-65,000** | **Dev hours + $240-2,040** |
+| Year 2 maintenance | ~$3,000-6,000 | $6,000 ($500/mo) |
+| **Year 2 total** | **$9,000-18,000** | **$6,120-7,020** |
+| **2-year total** | **$47,000-65,000** | **$17,240-19,040** |
 
-The custom app doesn't break even against the time savings until late Year 2 at best.
-Our approach pays for itself within the first month.
+At **$17-19K over two years vs. $47-65K**, you save 63-71% while getting the same
+outcome — plus full ownership, faster launch, and a proven architecture.
+Our approach pays for itself within the first month of time savings alone.
 
 ### Capacity Increase
 
@@ -237,8 +239,8 @@ patterns are identical.
 | **Architecture** | Custom web app, database, auth, roles | Google Sheets + Apps Script + n8n (proven in production) |
 | **IP ownership** | Vendor retains research engine | Client owns 100% of code, prompts, workflows |
 | **Time to first batch** | 2-4 months (build + test + deploy) | 1-2 weeks |
-| **Monthly operating cost** | $500-1,000+ (hosting, DB, AI, retainer) | $10-85 (API usage only) |
-| **Maintenance model** | Vendor dependency for all changes | Team edits prompts in a spreadsheet cell |
+| **Monthly operating cost** | $500-1,000+ (hosting, DB, AI, retainer) | $510-585 (API usage + maintenance retainer) |
+| **Maintenance model** | Vendor dependency for all changes | $500/mo retainer — monitoring, API updates, security, prompt tuning |
 | **Proven at Heffernan?** | No — net new, untested | Yes — same architecture already live for WC system |
 | **Scalability ceiling** | High (it's a real app) | Sufficient (~500 prospects/week before needing upgrade) |
 | **Risk if vendor disappears** | System becomes unmaintainable (research engine is proprietary) | Zero impact — everything is self-contained |
@@ -250,18 +252,22 @@ patterns are identical.
 
 ## Our Recommendation
 
-**Phase 1 — Validate the workflow (Week 1)**
+**Phase 1 — Validate the workflow (Week 1) — Included**
 Run the process manually with ChatGPT and 10-20 real prospects. Don't automate anything yet.
 Confirm that AI-researched, AI-drafted emails actually get responses. This costs $0.
 
-**Phase 2 — Build the automation (Weeks 2-3)**
+**Phase 2 — Build the automation (Weeks 2-3) — $5,000 flat fee**
 If Phase 1 produces results, we build the full pipeline described above. Same architecture
 as the WC Lead Gen system — proven, running, already familiar to the Heffernan team.
+Includes all 8 deliverables listed above, documentation, and team walkthrough.
 
-**Phase 3 — Iterate on prompts (Ongoing)**
-The quality of the output depends on the prompts. We tune research prompts and email
-templates based on real response data. This is where the real value compounds — and it's
-something Nadia's team can do themselves by editing a Google Sheet cell.
+**Phase 3 — Ongoing maintenance — $500/month**
+Production systems require ongoing care. The monthly retainer covers:
+- **Monitoring & uptime** — Proactive workflow health checks, error triage, Slack alert review
+- **API & integration updates** — Outreach.io, Perplexity, Apollo/Seamless.AI API changes, version upgrades, breaking change remediation
+- **Security & access management** — OAuth token rotation, credential hygiene, permissions audits
+- **Prompt optimization** — Tuning research and email prompts based on real response data to continuously improve output quality
+- **Priority support** — Direct access for troubleshooting, questions, and ad hoc adjustments
 
 ---
 
