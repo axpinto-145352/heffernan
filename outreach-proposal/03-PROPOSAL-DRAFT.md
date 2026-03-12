@@ -1,6 +1,6 @@
 # Outreach Automation — Initial Proposal
 
-**Prepared for:** Janine Berthold, Heffernan Insurance Brokers
+**Prepared for:** Janice Berthold, Heffernan Insurance Brokers
 **Prepared by:** Anthony Pinto, Veteran Vectors
 **Date:** March 2026
 **Status:** Draft for Review
@@ -9,7 +9,7 @@
 
 ## Background
 
-Janine's team received a $29,000 proposal to build a custom web application that automates
+Janice's team received a $29,000 proposal to build a custom web application that automates
 prospect research and personalized email outreach. After reviewing that proposal, we've
 identified several concerns and are presenting an alternative approach that delivers the
 same outcome at a fraction of the cost, using tools Heffernan already has access to.
