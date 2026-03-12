@@ -1,6 +1,6 @@
 # Outreach Automation — Initial Proposal
 
-**Prepared for:** Nadia Messiah, Director of Innovation/Development, Heffernan Insurance Brokers
+**Prepared for:** Janine Berthold, Heffernan Insurance Brokers
 **Prepared by:** Anthony Pinto, Veteran Vectors
 **Date:** March 2026
 **Status:** Draft for Review
@@ -9,7 +9,7 @@
 
 ## Background
 
-Nadia's team received a $29,000 proposal to build a custom web application that automates
+Janine's team received a $29,000 proposal to build a custom web application that automates
 prospect research and personalized email outreach. After reviewing that proposal, we've
 identified several concerns and are presenting an alternative approach that delivers the
 same outcome at a fraction of the cost, using tools Heffernan already has access to.
@@ -104,6 +104,22 @@ If you want to switch vendors, modify the system, or bring it in-house — you c
 
 ---
 
+## Why This Costs Less Than a Typical Build
+
+Veteran Vectors has already built and deployed the WC Prospects Lead Generation System
+for Heffernan. That existing engagement means significant infrastructure is already in place:
+
+- **n8n Cloud** — Already provisioned and running Heffernan workflows. No new instance needed.
+- **Perplexity API** — Already integrated and active. Additional usage shares the existing subscription, keeping incremental costs low.
+- **Seamless.AI / Apollo** — Contact lookup integration already built and tested.
+- **Slack alerting** — Error notification patterns already configured for Heffernan's workspace.
+- **Google Workspace patterns** — Apps Script orchestration, sheet templates, and deployment patterns are proven and reusable.
+
+A net-new vendor would need to stand up all of this from scratch. We're extending
+an existing, working system — which is why we can deliver at $5,000 instead of $29,000.
+
+---
+
 ## Cost Comparison
 
 | | Original Proposal | Our Approach |
@@ -176,6 +192,19 @@ redirected to higher-value work:
 
 At 2.5-5x outreach volume with no additional headcount, even a modest improvement in
 reply rates compounds into significantly more pipeline.
+
+### ROI Summary
+
+| | Year 1 | Year 2 | 2-Year Total |
+|-|--------|--------|--------------|
+| **Our total cost** | $11,120-12,020 | $6,120-7,020 | $17,240-19,040 |
+| **Time savings value** | $15,750-22,500 | $15,750-22,500 | $31,500-45,000 |
+| **Net ROI** | +$3,730-10,480 | +$9,730-15,380 | +$14,260-25,960 |
+| **Hours returned to the team** | 450 hours | 450 hours | **900 hours** |
+
+The system pays for itself in Year 1 and generates $10-15K in net value by Year 2.
+Over two years, nearly **900 hours** of manual research and data entry time are
+returned to the team — the equivalent of adding a half-time employee at zero headcount cost.
 
 ---
 
