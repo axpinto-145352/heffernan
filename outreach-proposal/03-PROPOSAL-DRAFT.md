@@ -117,6 +117,137 @@ If you want to switch vendors, modify the system, or bring it in-house — you c
 
 ---
 
+## ROI Analysis
+
+### Time Savings
+
+The primary cost being eliminated is manual EA research and email drafting time.
+
+| Metric | Current (Manual) | With Automation |
+|--------|-----------------|-----------------|
+| Research time per batch (50 prospects) | 4-6 hours | ~5 minutes (automated) |
+| Email drafting per batch | 1-2 hours | ~5 minutes (automated) |
+| Review & approval per batch | N/A (drafts don't exist yet) | 60-90 minutes |
+| Outreach.io data entry per batch | 30-60 minutes | ~1 minute (automated) |
+| **Total time per batch** | **5.5-8 hours** | **~2 hours** |
+| **Time saved per batch** | — | **3.5-6 hours** |
+
+### Dollar Value of Time Saved
+
+Assuming the EA runs **2 batches per week** (conservative for active prospecting):
+
+| Assumption | Value |
+|------------|-------|
+| EA fully-loaded hourly cost | $35-50/hr |
+| Hours saved per batch | 4.5 hours (midpoint) |
+| Batches per week | 2 |
+| Hours saved per week | 9 hours |
+| Hours saved per year (50 weeks) | **450 hours** |
+| **Annual value of time saved** | **$15,750 - $22,500** |
+
+### Total Cost of Ownership — 2-Year Comparison
+
+| | Their Custom App | Our Build |
+|-|-----------------|-----------|
+| Year 1 upfront | $29,000 | Dev hours (20-30 hrs) |
+| Year 1 monthly tools | ~$6,000-12,000 | ~$120-1,020 |
+| Year 1 maintenance retainer | ~$3,000-6,000 | $0 (self-serviceable) |
+| **Year 1 total** | **$38,000-47,000** | **Dev hours + $120-1,020** |
+| Year 2 monthly tools | ~$6,000-12,000 | ~$120-1,020 |
+| Year 2 maintenance | ~$3,000-6,000 | $0 |
+| **Year 2 total** | **$9,000-18,000** | **$120-1,020** |
+| **2-year total** | **$47,000-65,000** | **Dev hours + $240-2,040** |
+
+The custom app doesn't break even against the time savings until late Year 2 at best.
+Our approach pays for itself within the first month.
+
+### Capacity Increase
+
+Beyond time savings, the real ROI is **throughput**. The EA's freed-up hours can be
+redirected to higher-value work:
+
+| Metric | Current | With Automation |
+|--------|---------|-----------------|
+| Prospects researched per week | ~100 (2 batches x 50) | ~250-500 (same effort, more batches) |
+| Personalized emails sent per week | ~100 | ~250-500 |
+| EA hours available for other work | 0 | 9 hours/week |
+
+At 2.5-5x outreach volume with no additional headcount, even a modest improvement in
+reply rates compounds into significantly more pipeline.
+
+---
+
+## Case Study: Heffernan WC Prospects Lead Generation System
+
+We don't need to theorize about whether this architecture works. **It's already running
+in production for Heffernan.**
+
+### The System
+
+In February 2026, we built the WC Prospects Lead Generation System for Heffernan Insurance
+Brokers — a 6-step pipeline that takes raw WCIRB (Workers' Compensation Insurance Rating
+Bureau) prospect data and transforms it into fully enriched, outreach-ready lead profiles
+with mailing labels.
+
+### Same Architecture
+
+| Component | WC Lead Gen (Live) | Outreach System (Proposed) |
+|-----------|-------------------|---------------------------|
+| UI / Data Layer | Google Sheets | Google Sheets |
+| Orchestration | Google Apps Script | Google Apps Script |
+| AI Enrichment | n8n webhooks | n8n webhooks |
+| Company Research | Perplexity API | Perplexity API |
+| Contact Discovery | Seamless.AI API | Apollo or Seamless.AI API |
+| Output | Google Docs (labels) | Outreach.io (sequences) |
+| Error Monitoring | Slack alerts | Slack alerts |
+| Prompt Management | Google Sheet "Prompts" tab | Google Sheet "Prompts" tab |
+
+### What It Does Today
+
+The WC system processes **88 prospect companies** per batch:
+
+1. AI estimates employee count per company via Perplexity
+2. Filters to ~7 qualified companies by WC premium threshold ($25K+)
+3. AI researches revenue, domain, entity type, industry for each
+4. Discovers 5 decision-maker contacts per company (ranked by seniority)
+5. Scrapes LinkedIn profiles via Apify
+6. Generates formatted mailing labels in Google Docs
+
+**Processing time:** ~50-120 minutes for 88 companies, fully automated.
+**Manual effort:** Click one button, review results.
+
+### What This Proves
+
+- The Google Sheets + Apps Script + n8n pattern **works at scale** for Heffernan
+- The team already knows how to use it — same interface, same Slack alerts, same workflow
+- n8n webhook sub-workflows are reliable, retryable, and maintainable
+- Perplexity + Seamless.AI enrichment produces usable, accurate data
+- The Prompts tab approach lets non-technical users tune AI behavior without touching code
+
+The outreach system is essentially the same pipeline with a different output destination
+(Outreach.io instead of Google Docs). The research, contact discovery, and orchestration
+patterns are identical.
+
+---
+
+## Head-to-Head: Their Build vs. Ours
+
+| Factor | $29K Custom App | Veteran Vectors Build |
+|--------|----------------|----------------------|
+| **Architecture** | Custom web app, database, auth, roles | Google Sheets + Apps Script + n8n (proven in production) |
+| **IP ownership** | Vendor retains research engine | Client owns 100% of code, prompts, workflows |
+| **Time to first batch** | 2-4 months (build + test + deploy) | 1-2 weeks |
+| **Monthly operating cost** | $500-1,000+ (hosting, DB, AI, retainer) | $10-85 (API usage only) |
+| **Maintenance model** | Vendor dependency for all changes | Team edits prompts in a spreadsheet cell |
+| **Proven at Heffernan?** | No — net new, untested | Yes — same architecture already live for WC system |
+| **Scalability ceiling** | High (it's a real app) | Sufficient (~500 prospects/week before needing upgrade) |
+| **Risk if vendor disappears** | System becomes unmaintainable (research engine is proprietary) | Zero impact — everything is self-contained |
+| **Switching cost** | High — locked into vendor's platform | Low — standard tools, exportable data, no lock-in |
+| **User training** | New UI to learn | Same Google Sheets interface team already uses |
+| **Prompt iteration speed** | Requires vendor to modify research engine | Edit a cell in the Prompts tab, run next batch |
+
+---
+
 ## Our Recommendation
 
 **Phase 1 — Validate the workflow (Week 1)**
